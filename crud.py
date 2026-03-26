@@ -43,9 +43,13 @@ async def delete_student(student_id: str) -> None:
     )
 
 
-async def update_student_balance(student_id: str, balance: int) -> Optional[BakalariStudent]:
+async def update_student(data: CreateBakalariStudent) -> Optional[BakalariStudent]:
     await db.execute(
-        "UPDATE bakalari_rewards.students SET balance = :balance WHERE id = :id",
-        {"id": student_id, "balance": balance},
+        """
+        UPDATE bakalari_rewards.students
+        SET name = :name, wallet = :wallet
+        WHERE id = :id
+        """,
+        {"id": data.id, "name": data.name, "wallet": data.wallet},
     )
-    return await get_student(student_id)
+    return await get_student(data.id)
