@@ -1,8 +1,8 @@
 {
   "name": "Bakalari Rewards",
   "short_description": "Automatické odměny v BTC za školní známky",
-  "tile": "/bakalari_rewards/static/image/bakalari_rewards.png",
-  "min_lnbits_version": "1.3.0",
+  "icon": "/bakalari_rewards/static/image/myextension.png",
+  "min_lnbits_version": "0.12.0",
   "contributors": [
     {
       "name": "zirky",
