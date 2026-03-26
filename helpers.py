@@ -1,17 +1,11 @@
-# Description: A place for helper functions.
+# Pomocné funkce pro Bakaláři Rewards
 
-from fastapi import Request
-from lnurl.core import encode as lnurl_encode
-
-# The lnurler function is used to generate the lnurlpay and lnurlwithdraw links
-# from the lnurl api endpoints in views_lnurl.py.
-# It needs the Request object to know the url of the LNbits.
-# Lnurler is used in views_api.py
+from lnbits.core.crud import get_wallet
 
 
-def lnurler(myex_id: str, route_name: str, req: Request) -> str:
-    url = req.url_for(route_name, myextension_id=myex_id)
-    url_str = str(url)
-    if url.netloc.endswith(".onion"):
-        url_str = url_str.replace("https://", "http://")
-    return str(lnurl_encode(url_str))
+async def get_wallet_name(wallet_id: str) -> str:
+    """Vrátí název peněženky podle ID."""
+    wallet = await get_wallet(wallet_id)
+    if wallet:
+        return wallet.name
+    return "Neznámá peněženka"
