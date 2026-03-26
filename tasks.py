@@ -45,24 +45,23 @@ async def fetch_bakalari_grades(bakalari_url: str, username: str, password: str)
 
 
 async def send_reward(wallet_id: str, amount_sats: int, memo: str):
-    """Odesle interni platbu na penezni LNbits ucet."""
+    """Prida satoshi na LNbits penezni ucet studenta (interni kredit)."""
     try:
-        from lnbits.core.services import create_invoice, pay_invoice
-        payment_hash, payment_request = await create_invoice(
-            wallet_id=wallet_id,
-            amount=amount_sats,
-            memo=memo,
-            internal=True,
+        from lnbits.core.crud import get_wallet
+        from lnbits.db import Database
+
+        # Pouzijeme interni DB pro primy update zustatku
+        core_db = Database("database")
+        await core_db.execute(
+            """
+            UPDATE wallets SET balance = balance + :amount
+            WHERE id = :wallet_id
+            """,
+            {"wallet_id": wallet_id, "amount": amount_sats * 1000},
         )
-        await pay_invoice(
-            wallet_id=wallet_id,
-            payment_request=payment_request,
-            max_sat=amount_sats + 1,
-            extra={"tag": "bakalari_rewards"},
-        )
-        logger.info(f"Odmena {amount_sats} sat odeslana: {memo}")
+        logger.info(f"Odmena {amount_sats} sat pridana na penezni ucet {wallet_id}: {memo}")
     except Exception as e:
-        logger.warning(f"Chyba pri odeslani odmeny: {e}")
+        logger.warning(f"Chyba pri pridani odmeny: {e}")
 
 
 async def process_student_grades(student):
@@ -73,7 +72,6 @@ async def process_student_grades(student):
             student.bakalari_username,
             student.bakalari_password,
         )
-
         marks = grades_data.get("Marks", [])
         last_check = student.last_check
 
@@ -99,7 +97,6 @@ async def process_student_grades(student):
 
             reward_field = GRADE_REWARD_MAP[grade]
             reward_sats = getattr(student, reward_field, 0)
-
             if reward_sats > 0:
                 subject = mark.get("Subject", "")
                 memo = f"Bakalari odmena: {student.name} - {subject} - znamka {grade}"
