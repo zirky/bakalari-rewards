@@ -1,30 +1,32 @@
-# Description: Pydantic data models dictate what is passed between frontend and backend.
-
-
 from pydantic import BaseModel
+from typing import Optional
 
 
-class CreateMyExtensionData(BaseModel):
-    id: str | None = ""
+class CreateBakalariStudent(BaseModel):
+    id: Optional[str] = None
     name: str
-    lnurlpayamount: int
-    lnurlwithdrawamount: int
     wallet: str
-    total: int = 0
+    bakalari_url: str
+    bakalari_username: str
+    bakalari_password: str
+    reward_grade_1: int = 100
+    reward_grade_2: int = 75
+    reward_grade_3: int = 50
+    reward_grade_4: int = 25
+    reward_grade_5: int = 0
+    last_check: Optional[str] = None
 
 
-class MyExtension(BaseModel):
+class BakalariStudent(BaseModel):
     id: str
     name: str
-    lnurlpayamount: int
-    lnurlwithdrawamount: int
     wallet: str
-    total: int
-    lnurlpay: str | None = ""
-    lnurlwithdraw: str | None = ""
-
-
-class CreatePayment(BaseModel):
-    myextension_id: str
-    amount: int
-    memo: str
+    bakalari_url: str
+    bakalari_username: str
+    bakalari_password: str
+    reward_grade_1: int
+    reward_grade_2: int
+    reward_grade_3: int
+    reward_grade_4: int
+    reward_grade_5: int
+    last_check: Optional[str] = None
