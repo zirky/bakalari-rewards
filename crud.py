@@ -53,3 +53,14 @@ async def update_student(data: CreateBakalariStudent) -> Optional[BakalariStuden
         {"id": data.id, "name": data.name, "wallet": data.wallet},
     )
     return await get_student(data.id)
+
+
+async def update_student_last_check(student_id: str, last_check: str) -> None:
+    await db.execute(
+        """
+        UPDATE bakalari_rewards.students
+        SET last_check = :last_check
+        WHERE id = :id
+        """,
+        {"id": student_id, "last_check": last_check},
+    )
