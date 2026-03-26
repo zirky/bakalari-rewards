@@ -8,12 +8,12 @@ import os
 
 bakalari_rewards_generic_router = APIRouter()
 
+# Absolutni cesta k templates/ slozce teto extension (funguje i z upgrades/)
+_EXT_TEMPLATES = str(Path(os.path.dirname(os.path.abspath(__file__))) / "templates")
+
 
 def bakalari_rewards_renderer():
-    # Get the directory of this file (extension root)
-    ext_dir = Path(os.path.dirname(os.path.abspath(__file__)))
-    templates_dir = ext_dir / "templates"
-    return template_renderer([str(templates_dir)])
+    return template_renderer([_EXT_TEMPLATES])
 
 
 @bakalari_rewards_generic_router.get("/", response_class=HTMLResponse)
