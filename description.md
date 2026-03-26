@@ -1,10 +1,12 @@
-MyExtension can be used as a template for building new extensions, it includes a bunch of functions that can be edited/deleted as you need them.
+Bakaláři Rewards je rozšíření pro LNbits, které umožňuje učitelům odměňovat žáky satoshi (Bitcoin) za jejich školní výsledky a práci.
 
-This is a longform description that will be used in the advanced description when users click on the "more" button on the extension cards.
+Toto rozšíření poskytuje:
 
-Adding some bullets is nice covering:
+- Správu žáků - přidávání a mazání žáků ze systému
+- Bitcoin peňěženky pro každého žáka
+- Vyplácení odměn (satoshi) za dobré známky nebo splněné úkoly
+- Přehled zůstatků všech žáků
+- Jednoduché uživatelské rozhraní pro učitele
 
-- Functionality
-- Use cases
-
-...and some other text about just how great this etension is.
+Použití:
+Učitel přidá žáky do systému, každý žák získá svou Bitcoin Lightning peňěženku. Za dobrou práci může učitel odeslat satoshi přímo do žákovy peňěženky.
