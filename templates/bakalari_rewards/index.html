@@ -1,0 +1,158 @@
+{% extends "public.html" %}
+{% block page %}
+<div class="row q-col-gutter-md">
+  <div class="col-12 col-md-7 q-gutter-y-md">
+    <q-card>
+      <q-card-section>
+        <h5 class="text-subtitle1 q-my-none">
+          <strong>Bakáláři Rewards</strong> — Automatické odměny v Bitcoin za školní známky
+        </h5>
+      </q-card-section>
+    </q-card>
+
+    <q-card>
+      <q-card-section>
+        <div class="row items-center no-wrap q-mb-md">
+          <div class="col">
+            <h5 class="text-subtitle1 q-my-none">Seznam žáků</h5>
+          </div>
+          <div class="col-auto">
+            <q-btn
+              flat
+              color="primary"
+              @click="showStudentDialog = true"
+              label="Přidat žáka"
+            />
+          </div>
+        </div>
+        <q-table
+          :rows="students"
+          :columns="columns"
+          row-key="id"
+          :no-data-label="'Zatím žádní žáci'"
+        >
+          <template v-slot:body-cell-actions="props">
+            <q-td auto-width>
+              <q-btn
+                flat
+                dense
+                color="negative"
+                icon="delete"
+                @click="deleteStudent(props.row.id)"
+              />
+            </q-td>
+          </template>
+        </q-table>
+      </q-card-section>
+    </q-card>
+  </div>
+
+  <div class="col-12 col-md-5 q-gutter-y-md">
+    <q-card>
+      <q-card-section>
+        <h5 class="text-subtitle1 q-my-none">Nastaveni odměn (sats)</h5>
+        <div class="q-mt-md">
+          <div class="row items-center" v-for="g in [1,2,3,4,5]" :key="g">
+            <div class="col-4">Známka {{ g }}:</div>
+            <div class="col-8 q-pa-xs">
+              <q-badge color="primary">{{ g == 1 ? 100 : g == 2 ? 75 : g == 3 ? 50 : g == 4 ? 25 : 0 }} sats</q-badge>
+            </div>
+          </div>
+        </div>
+      </q-card-section>
+    </q-card>
+  </div>
+</div>
+
+<q-dialog v-model="showStudentDialog">
+  <q-card style="min-width: 400px">
+    <q-card-section>
+      <h5 class="text-subtitle1 q-my-none">Přidat žáka</h5>
+    </q-card-section>
+    <q-card-section>
+      <q-input v-model="newStudent.name" label="Jméno žáka" class="q-mb-sm" />
+      <q-input v-model="newStudent.bakalari_url" label="Bakaláři URL (např. https://skola.bakalari.cz)" class="q-mb-sm" />
+      <q-input v-model="newStudent.bakalari_username" label="Přihlašovací jméno" class="q-mb-sm" />
+      <q-input v-model="newStudent.bakalari_password" label="Heslo" type="password" class="q-mb-sm" />
+      <q-input v-model.number="newStudent.reward_grade_1" label="Odměna za 1 (sats)" type="number" class="q-mb-sm" />
+      <q-input v-model.number="newStudent.reward_grade_2" label="Odměna za 2 (sats)" type="number" class="q-mb-sm" />
+      <q-input v-model.number="newStudent.reward_grade_3" label="Odměna za 3 (sats)" type="number" class="q-mb-sm" />
+      <q-input v-model.number="newStudent.reward_grade_4" label="Odměna za 4 (sats)" type="number" class="q-mb-sm" />
+      <q-input v-model.number="newStudent.reward_grade_5" label="Odměna za 5 (sats)" type="number" />
+    </q-card-section>
+    <q-card-actions align="right">
+      <q-btn flat label="Zrušit" v-close-popup />
+      <q-btn color="primary" label="Uložit" @click="createStudent" />
+    </q-card-actions>
+  </q-card>
+</q-dialog>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  new Vue({
+    el: '#vue',
+    mixins: [windowMixin],
+    data: function() {
+      return {
+        students: [],
+        showStudentDialog: false,
+        newStudent: {
+          name: '',
+          bakalari_url: '',
+          bakalari_username: '',
+          bakalari_password: '',
+          reward_grade_1: 100,
+          reward_grade_2: 75,
+          reward_grade_3: 50,
+          reward_grade_4: 25,
+          reward_grade_5: 0
+        },
+        columns: [
+          { name: 'name', label: 'Jméno', field: 'name', align: 'left' },
+          { name: 'bakalari_url', label: 'URL školy', field: 'bakalari_url', align: 'left' },
+          { name: 'last_check', label: 'Poslední kontrola', field: 'last_check', align: 'left' },
+          { name: 'actions', label: 'Akce', align: 'center' }
+        ]
+      }
+    },
+    created: function() {
+      this.getStudents()
+    },
+    methods: {
+      getStudents: function() {
+        var self = this
+        LNbits.api.request(
+          'GET',
+          '/bakalari_rewards/api/v1/students',
+          this.g.user.wallets[0].inkey
+        ).then(function(response) {
+          self.students = response.data
+        })
+      },
+      createStudent: function() {
+        var self = this
+        LNbits.api.request(
+          'POST',
+          '/bakalari_rewards/api/v1/students',
+          this.g.user.wallets[0].adminkey,
+          this.newStudent
+        ).then(function(response) {
+          self.students.push(response.data)
+          self.showStudentDialog = false
+        })
+      },
+      deleteStudent: function(id) {
+        var self = this
+        LNbits.api.request(
+          'DELETE',
+          '/bakalari_rewards/api/v1/students/' + id,
+          this.g.user.wallets[0].adminkey
+        ).then(function() {
+          self.students = self.students.filter(function(s) { return s.id !== id })
+        })
+      }
+    }
+  })
+<\/script>
+{% endblock %}
