@@ -4,239 +4,105 @@ window.app = Vue.createApp({
   delimiters: ['${', '}'],
   data: function () {
     return {
-      invoiceAmount: 10,
-      qrValue: '',
-      myex: [],
-      myexTable: {
-        columns: [
-          {name: 'id', align: 'left', label: 'ID', field: 'id'},
-          {name: 'name', align: 'left', label: 'Name', field: 'name'},
-          {
-            name: 'wallet',
-            align: 'left',
-            label: 'Wallet',
-            field: 'wallet'
-          },
-          {
-            name: 'total',
-            align: 'left',
-            label: 'Total sent/received',
-            field: 'total'
-          }
-        ],
-        pagination: {
-          rowsPerPage: 10
-        }
-      },
+      students: [],
+      showStudentDialog: false,
       formDialog: {
         show: false,
-        data: {},
-        advanced: {}
+        data: {
+          name: '',
+          wallet: '',
+          bakalari_url: '',
+          bakalari_username: '',
+          bakalari_password: '',
+          reward_grade_1: 100,
+          reward_grade_2: 75,
+          reward_grade_3: 50,
+          reward_grade_4: 25,
+          reward_grade_5: 0
+        }
       },
-      urlDialog: {
-        show: false,
-        data: {}
+      studentsTable: {
+        columns: [
+          {name: 'name', align: 'left', label: 'Jmeno', field: 'name'},
+          {name: 'bakalari_url', align: 'left', label: 'URL skoly', field: 'bakalari_url'},
+          {name: 'reward_sats', align: 'left', label: 'Odmena za znamky'},
+          {name: 'last_check', align: 'left', label: 'Posledni kontrola', field: 'last_check'},
+          {name: 'actions', align: 'center', label: 'Akce'}
+        ]
       }
     }
   },
-
-  ///////////////////////////////////////////////////
-  ////////////////METHODS FUNCTIONS//////////////////
-  ///////////////////////////////////////////////////
-
+  created: function () {
+    this.getStudents()
+  },
   methods: {
-    async closeFormDialog() {
-      this.formDialog.show = false
-      this.formDialog.data = {}
-    },
-    async getMyExtensions() {
-      await LNbits.api
+    getStudents: function () {
+      var self = this
+      LNbits.api
         .request(
           'GET',
-          '/myextension/api/v1/myex',
+          '/bakalari_rewards/api/v1/students',
           this.g.user.wallets[0].inkey
         )
-        .then(response => {
-          this.myex = response.data
+        .then(function (response) {
+          self.students = response.data
         })
-        .catch(err => {
+        .catch(function (err) {
           LNbits.utils.notifyApiError(err)
         })
     },
-    async sendMyExtensionData() {
-      const data = {
-        name: this.formDialog.data.name,
-        lnurlwithdrawamount: this.formDialog.data.lnurlwithdrawamount,
-        lnurlpayamount: this.formDialog.data.lnurlpayamount
-      }
-      const wallet = _.findWhere(this.g.user.wallets, {
-        id: this.formDialog.data.wallet
+    createStudent: function () {
+      var self = this
+      var wallet = this.g.user.wallets.find(function (w) {
+        return w.id === self.formDialog.data.wallet
       })
-      if (this.formDialog.data.id) {
-        data.id = this.formDialog.data.id
-        data.total = this.formDialog.data.total
-        await this.updateMyExtension(wallet, data)
-      } else {
-        await this.createMyExtension(wallet, data)
+      if (!wallet) {
+        wallet = this.g.user.wallets[0]
+        self.formDialog.data.wallet = wallet.id
       }
-    },
-
-    async updateMyExtensionForm(tempId) {
-      const myextension = _.findWhere(this.myex, {id: tempId})
-      this.formDialog.data = {
-        ...myextension
-      }
-      if (this.formDialog.data.tip_wallet != '') {
-        this.formDialog.advanced.tips = true
-      }
-      if (this.formDialog.data.withdrawlimit >= 1) {
-        this.formDialog.advanced.otc = true
-      }
-      this.formDialog.show = true
-    },
-    async createMyExtension(wallet, data) {
-      data.wallet = wallet.id
-      await LNbits.api
-        .request('POST', '/myextension/api/v1/myex', wallet.adminkey, data)
-        .then(response => {
-          this.myex.push(response.data)
-          this.closeFormDialog()
-        })
-        .catch(error => {
-          LNbits.utils.notifyApiError(error)
-        })
-    },
-
-    async updateMyExtension(wallet, data) {
-      data.wallet = wallet.id
-      await LNbits.api
+      LNbits.api
         .request(
-          'PUT',
-          `/myextension/api/v1/myex/${data.id}`,
+          'POST',
+          '/bakalari_rewards/api/v1/students',
           wallet.adminkey,
-          data
+          self.formDialog.data
         )
-        .then(response => {
-          this.myex = _.reject(this.myex, obj => obj.id == data.id)
-          this.myex.push(response.data)
-          this.closeFormDialog()
+        .then(function (response) {
+          self.students.push(response.data)
+          self.formDialog.show = false
+          self.formDialog.data = {
+            name: '',
+            wallet: '',
+            bakalari_url: '',
+            bakalari_username: '',
+            bakalari_password: '',
+            reward_grade_1: 100,
+            reward_grade_2: 75,
+            reward_grade_3: 50,
+            reward_grade_4: 25,
+            reward_grade_5: 0
+          }
         })
-        .catch(error => {
-          LNbits.utils.notifyApiError(error)
-        })
-    },
-    async deleteMyExtension(tempId) {
-      var myextension = _.findWhere(this.myex, {id: tempId})
-      const wallet = _.findWhere(this.g.user.wallets, {
-        id: myextension.wallet
-      })
-      await LNbits.utils
-        .confirmDialog('Are you sure you want to delete this MyExtension?')
-        .onOk(function () {
-          LNbits.api
-            .request(
-              'DELETE',
-              '/myextension/api/v1/myex/' + tempId,
-              wallet.adminkey
-            )
-            .then(() => {
-              this.myex = _.reject(this.myex, function (obj) {
-                return obj.id === myextension.id
-              })
-            })
-            .catch(error => {
-              LNbits.utils.notifyApiError(error)
-            })
+        .catch(function (err) {
+          LNbits.utils.notifyApiError(err)
         })
     },
-
-    async exportCSV() {
-      await LNbits.utils.exportCSV(this.myexTable.columns, this.myex)
-    },
-    async itemsArray(tempId) {
-      const myextension = _.findWhere(this.myex, {id: tempId})
-      return [...myextension.itemsMap.values()]
-    },
-    async openformDialog(id) {
-      const [tempId, itemId] = id.split(':')
-      const myextension = _.findWhere(this.myex, {id: tempId})
-      if (itemId) {
-        const item = myextension.itemsMap.get(id)
-        this.formDialog.data = {
-          ...item,
-          myextension: tempId
-        }
-      } else {
-        this.formDialog.data.myextension = tempId
-      }
-      this.formDialog.data.currency = myextension.currency
-      this.formDialog.show = true
-    },
-    async openUrlDialog(tempid) {
-      this.urlDialog.data = _.findWhere(this.myex, {id: tempid})
-      this.qrValue = this.urlDialog.data.lnurlpay
-
-      // Connecting to our websocket fired in tasks.py
-      this.connectWebocket(this.urlDialog.data.id)
-
-      this.urlDialog.show = true
-    },
-    async closeformDialog() {
-      this.formDialog.show = false
-      this.formDialog.data = {}
-    },
-    async createInvoice(tempid) {
-      ///////////////////////////////////////////////////
-      ///Simple call to the api to create an invoice/////
-      ///////////////////////////////////////////////////
-      myex = _.findWhere(this.myex, {id: tempid})
-      const wallet = _.findWhere(this.g.user.wallets, {id: myex.wallet})
-      const data = {
-        myextension_id: tempid,
-        amount: this.invoiceAmount,
-        memo: 'MyExtension - ' + myex.name
-      }
-      await LNbits.api
-        .request('POST', `/myextension/api/v1/myex/payment`, wallet.inkey, data)
-        .then(response => {
-          this.qrValue = response.data.payment_request
-          this.connectWebocket(wallet.inkey)
+    deleteStudent: function (id) {
+      var self = this
+      LNbits.api
+        .request(
+          'DELETE',
+          '/bakalari_rewards/api/v1/students/' + id,
+          this.g.user.wallets[0].adminkey
+        )
+        .then(function () {
+          self.students = self.students.filter(function (s) {
+            return s.id !== id
+          })
         })
-        .catch(error => {
-          LNbits.utils.notifyApiError(error)
+        .catch(function (err) {
+          LNbits.utils.notifyApiError(err)
         })
-    },
-    connectWebocket(myextension_id) {
-      //////////////////////////////////////////////////
-      ///wait for pay action to happen and do a thing////
-      ///////////////////////////////////////////////////
-      if (location.protocol !== 'http:') {
-        localUrl =
-          'wss://' +
-          document.domain +
-          ':' +
-          location.port +
-          '/api/v1/ws/' +
-          myextension_id
-      } else {
-        localUrl =
-          'ws://' +
-          document.domain +
-          ':' +
-          location.port +
-          '/api/v1/ws/' +
-          myextension_id
-      }
-      this.connection = new WebSocket(localUrl)
-      this.connection.onmessage = () => {
-        this.urlDialog.show = false
-      }
     }
-  },
-  ///////////////////////////////////////////////////
-  //////LIFECYCLE FUNCTIONS RUNNING ON PAGE LOAD/////
-  ///////////////////////////////////////////////////
-  async created() {
-    await this.getMyExtensions()
   }
 })
