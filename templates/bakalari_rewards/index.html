@@ -1,11 +1,17 @@
-{% extends "public.html" %}
-{% block page %}
-<div class="row q-col-gutter-md">
-  <div class="col-12 col-md-7 q-gutter-y-md">
+<!---->
+<!----PAGE FOR THE EXTENSIONS BACKEND IN LNBITS/------>
+<!---->
+
+{% extends "base.html" %} {% from "macros.jinja" import window_vars with context
+%} {% block scripts %} {{ window_vars(user) }}
+<script src="{{ static_url_for('bakalari_rewards/static', path='js/index.js') }}"></script>
+{% endblock %} {% block page %}
+<div class="row q-col-gutter-md" id="bakalari-rewards">
+  <div class="col-12 col-md-8 col-lg-7 q-gutter-y-md">
     <q-card>
       <q-card-section>
         <h5 class="text-subtitle1 q-my-none">
-          <strong>Bakaláři Rewards</strong> &mdash; Automatické odměny v Bitcoin za školní známky
+          <strong>Bakal&aacute;&rcaron;i Rewards</strong> &mdash; Automatick&eacute; odm&ecaron;ny v Bitcoin za &scaron;koln&iacute; zn&aacute;mky
         </h5>
       </q-card-section>
     </q-card>
@@ -14,22 +20,22 @@
       <q-card-section>
         <div class="row items-center no-wrap q-mb-md">
           <div class="col">
-            <h5 class="text-subtitle1 q-my-none">Seznam žáků</h5>
+            <h5 class="text-subtitle1 q-my-none">Seznam &zcaron;&aacute;k&#367;</h5>
           </div>
           <div class="col-auto">
             <q-btn
               flat
               color="primary"
-              @click="showStudentDialog = true"
-              label="Přidat žáka"
+              @click="formDialog.show = true"
+              label="P&#345;idat &zcaron;&aacute;ka"
             />
           </div>
         </div>
         <q-table
           :rows="students"
-          :columns="columns"
+          :columns="studentsTable.columns"
           row-key="id"
-          :no-data-label="'Zatím žádní žáci'"
+          no-data-label="Zat&iacute;m &zcaron;&aacute;dn&iacute; &zcaron;&aacute;ci"
         >
           <template v-slot:body-cell-reward_sats="props">
             <q-td auto-width>
@@ -57,169 +63,76 @@
   </div>
 </div>
 
-<!-- Dialog pro pridani zaka -->
-<q-dialog v-model="showStudentDialog" persistent>
+<q-dialog v-model="formDialog.show" persistent>
   <q-card style="min-width: 400px">
     <q-card-section>
-      <h6 class="q-my-none">Přidat žáka</h6>
+      <h6 class="q-my-none">P&#345;idat &zcaron;&aacute;ka</h6>
     </q-card-section>
     <q-card-section>
       <q-select
         filled
-        v-model="newStudent.wallet"
+        v-model="formDialog.data.wallet"
         :options="g.user.wallets"
         option-value="id"
         option-label="name"
         emit-value
         map-options
-        label="Peněženka LNbits"
+        label="Pen&#283;&zcaron;enka LNbits"
       />
       <q-input
         filled
-        v-model="newStudent.name"
-        label="Jméno žáka"
+        v-model="formDialog.data.name"
+        label="Jm&eacute;no &zcaron;&aacute;ka"
         class="q-mt-sm"
       />
       <q-input
         filled
-        v-model="newStudent.bakalari_url"
-        label="URL Bakalářů (např. https://skola.bakalari.cz)"
+        v-model="formDialog.data.bakalari_url"
+        label="URL Bakal&aacute;&rcaron;&#367; (nap&#345;. https://skola.bakalari.cz)"
         class="q-mt-sm"
       />
       <q-input
         filled
-        v-model="newStudent.bakalari_username"
-        label="Přihlašovací jméno Bakaláři"
+        v-model="formDialog.data.bakalari_username"
+        label="P&#345;ihla&scaron;ovac&iacute; jm&eacute;no Bakal&aacute;&rcaron;i"
         class="q-mt-sm"
       />
       <q-input
         filled
-        v-model="newStudent.bakalari_password"
-        label="Heslo Bakaláři"
+        v-model="formDialog.data.bakalari_password"
+        label="Heslo Bakal&aacute;&rcaron;i"
         type="password"
         class="q-mt-sm"
       />
       <div class="q-mt-md">
-        <div class="text-subtitle2">Odměna za známku (sats)</div>
+        <div class="text-subtitle2">Odm&#283;na za zn&aacute;mku (sats)</div>
         <div class="row q-col-gutter-sm q-mt-xs">
           <div class="col-6 col-sm-4">
-            <q-input filled v-model.number="newStudent.reward_grade_1" label="Známka 1 (sat)" type="number" min="0" />
+            <q-input filled v-model.number="formDialog.data.reward_grade_1" label="Zn&aacute;mka 1 (sat)" type="number" min="0" />
           </div>
           <div class="col-6 col-sm-4">
-            <q-input filled v-model.number="newStudent.reward_grade_2" label="Známka 2 (sat)" type="number" min="0" />
+            <q-input filled v-model.number="formDialog.data.reward_grade_2" label="Zn&aacute;mka 2 (sat)" type="number" min="0" />
           </div>
           <div class="col-6 col-sm-4">
-            <q-input filled v-model.number="newStudent.reward_grade_3" label="Známka 3 (sat)" type="number" min="0" />
+            <q-input filled v-model.number="formDialog.data.reward_grade_3" label="Zn&aacute;mka 3 (sat)" type="number" min="0" />
           </div>
           <div class="col-6 col-sm-4">
-            <q-input filled v-model.number="newStudent.reward_grade_4" label="Známka 4 (sat)" type="number" min="0" />
+            <q-input filled v-model.number="formDialog.data.reward_grade_4" label="Zn&aacute;mka 4 (sat)" type="number" min="0" />
           </div>
           <div class="col-6 col-sm-4">
-            <q-input filled v-model.number="newStudent.reward_grade_5" label="Známka 5 (sat)" type="number" min="0" />
+            <q-input filled v-model.number="formDialog.data.reward_grade_5" label="Zn&aacute;mka 5 (sat)" type="number" min="0" />
           </div>
         </div>
       </div>
     </q-card-section>
     <q-card-actions align="right">
-      <q-btn flat label="Zrušit" @click="showStudentDialog = false" />
+      <q-btn flat label="Zru&scaron;it" @click="formDialog.show = false" />
       <q-btn
         color="primary"
-        label="Přidat"
+        label="P&#345;idat"
         @click="createStudent"
       />
     </q-card-actions>
   </q-card>
 </q-dialog>
-{% endblock %}
-
-{% block scripts %}
-  new Vue({
-    el: '#vue',
-    mixins: [windowMixin],
-    data: function () {
-      return {
-        students: [],
-        showStudentDialog: false,
-        newStudent: {
-          name: '',
-          wallet: '',
-          bakalari_url: '',
-          bakalari_username: '',
-          bakalari_password: '',
-          reward_grade_1: 100,
-          reward_grade_2: 75,
-          reward_grade_3: 50,
-          reward_grade_4: 25,
-          reward_grade_5: 0
-        },
-        columns: [
-          { name: 'name', label: 'Jméno', field: 'name', align: 'left' },
-          { name: 'bakalari_url', label: 'URL školy', field: 'bakalari_url', align: 'left' },
-          { name: 'reward_sats', label: 'Odměna za známky', align: 'left' },
-          { name: 'last_check', label: 'Poslední kontrola', field: 'last_check', align: 'left' },
-          { name: 'actions', label: 'Akce', align: 'center' }
-        ]
-      }
-    },
-    created: function () {
-      this.getStudents()
-    },
-    methods: {
-      getStudents: function () {
-        var self = this
-        LNbits.api.request(
-          'GET',
-          '/bakalari_rewards/api/v1/students',
-          this.g.user.wallets[0].inkey
-        ).then(function (response) {
-          self.students = response.data
-        })
-      },
-      createStudent: function () {
-        var self = this
-        var wallet = this.g.user.wallets.find(function(w) { return w.id === self.newStudent.wallet })
-        if (!wallet) {
-          wallet = this.g.user.wallets[0]
-          self.newStudent.wallet = wallet.id
-        }
-        LNbits.api.request(
-          'POST',
-          '/bakalari_rewards/api/v1/students',
-          wallet.adminkey,
-          self.newStudent
-        ).then(function (response) {
-          self.students.push(response.data)
-          self.showStudentDialog = false
-          self.newStudent = {
-            name: '',
-            wallet: '',
-            bakalari_url: '',
-            bakalari_username: '',
-            bakalari_password: '',
-            reward_grade_1: 100,
-            reward_grade_2: 75,
-            reward_grade_3: 50,
-            reward_grade_4: 25,
-            reward_grade_5: 0
-          }
-        }).catch(function(err) {
-          LNbits.utils.notifyApiError(err)
-        })
-      },
-      deleteStudent: function (id) {
-        var self = this
-        LNbits.api.request(
-          'DELETE',
-          '/bakalari_rewards/api/v1/students/' + id,
-          this.g.user.wallets[0].adminkey
-        ).then(function () {
-          self.students = self.students.filter(function (s) {
-            return s.id !== id
-          })
-        }).catch(function(err) {
-          LNbits.utils.notifyApiError(err)
-        })
-      }
-    }
-  })
 {% endblock %}
