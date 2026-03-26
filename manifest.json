@@ -1,9 +1,9 @@
 {
   "repos": [
     {
-      "id": "myextension",
-      "organisation": "lnbits",
-      "repository": "myextension"
+      "id": "bakalari_rewards",
+      "organisation": "zirky",
+      "repository": "bakalari-rewards"
     }
   ]
 }
