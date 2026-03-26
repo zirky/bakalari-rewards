@@ -3,17 +3,22 @@ from fastapi.responses import HTMLResponse
 from lnbits.core.models import User
 from lnbits.decorators import check_user_exists
 from lnbits.helpers import template_renderer
+from pathlib import Path
+import os
 
 bakalari_rewards_generic_router = APIRouter()
 
 
 def bakalari_rewards_renderer():
-    return template_renderer(["bakalari_rewards"])
+    # Get the directory of this file (extension root)
+    ext_dir = Path(os.path.dirname(os.path.abspath(__file__)))
+    templates_dir = ext_dir / "templates"
+    return template_renderer([str(templates_dir)])
 
 
 @bakalari_rewards_generic_router.get("/", response_class=HTMLResponse)
 async def index(request: Request, user: User = Depends(check_user_exists)):
     return bakalari_rewards_renderer().TemplateResponse(
-        "index.html",
+        "bakalari_rewards/index.html",
         {"request": request, "user": user.dict()},
     )
