@@ -5,33 +5,29 @@ from lnbits.tasks import create_permanent_unique_task
 from loguru import logger
 
 from .crud import db
-from .tasks import wait_for_paid_invoices
-from .views import myextension_generic_router
-from .views_api import myextension_api_router
-from .views_lnurl import myextension_lnurl_router
+from .tasks import bakalari_rewards_task
+from .views import bakalari_rewards_generic_router
+from .views_api import bakalari_rewards_api_router
 
-logger.debug(
-    "This logged message is from myextension/__init__.py, you can debug in your "
-    "extension using 'import logger from loguru' and 'logger.debug(<thing-to-log>)'."
+logger.debug("Bakalari Rewards extension loaded.")
+
+bakalari_rewards_ext: APIRouter = APIRouter(
+    prefix="/bakalari_rewards", tags=["Bakalari Rewards"]
 )
+bakalari_rewards_ext.include_router(bakalari_rewards_generic_router)
+bakalari_rewards_ext.include_router(bakalari_rewards_api_router)
 
-
-myextension_ext: APIRouter = APIRouter(prefix="/myextension", tags=["MyExtension"])
-myextension_ext.include_router(myextension_generic_router)
-myextension_ext.include_router(myextension_api_router)
-myextension_ext.include_router(myextension_lnurl_router)
-
-myextension_static_files = [
+bakalari_rewards_static_files = [
     {
-        "path": "/myextension/static",
-        "name": "myextension_static",
+        "path": "/bakalari_rewards/static",
+        "name": "bakalari_rewards_static",
     }
 ]
 
 scheduled_tasks: list[asyncio.Task] = []
 
 
-def myextension_stop():
+def bakalari_rewards_stop():
     for task in scheduled_tasks:
         try:
             task.cancel()
@@ -39,15 +35,17 @@ def myextension_stop():
             logger.warning(ex)
 
 
-def myextension_start():
-    task = create_permanent_unique_task("ext_myextension", wait_for_paid_invoices)
+def bakalari_rewards_start():
+    task = create_permanent_unique_task(
+        "ext_bakalari_rewards", bakalari_rewards_task
+    )
     scheduled_tasks.append(task)
 
 
 __all__ = [
     "db",
-    "myextension_ext",
-    "myextension_start",
-    "myextension_static_files",
-    "myextension_stop",
+    "bakalari_rewards_ext",
+    "bakalari_rewards_start",
+    "bakalari_rewards_static_files",
+    "bakalari_rewards_stop",
 ]
