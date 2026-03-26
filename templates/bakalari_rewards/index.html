@@ -31,6 +31,15 @@
           row-key="id"
           :no-data-label="'Zatím žádní žáci'"
         >
+          <template v-slot:body-cell-reward_sats="props">
+            <q-td auto-width>
+              <span>1: ${ props.row.reward_grade_1 } sat</span>
+              <span class="q-ml-sm">2: ${ props.row.reward_grade_2 } sat</span>
+              <span class="q-ml-sm">3: ${ props.row.reward_grade_3 } sat</span>
+              <span class="q-ml-sm">4: ${ props.row.reward_grade_4 } sat</span>
+              <span class="q-ml-sm">5: ${ props.row.reward_grade_5 } sat</span>
+            </q-td>
+          </template>
           <template v-slot:body-cell-actions="props">
             <q-td auto-width>
               <q-btn
@@ -48,27 +57,82 @@
   </div>
 </div>
 
-<q-dialog v-model="showStudentDialog">
+<!-- Dialog pro pridani zaka -->
+<q-dialog v-model="showStudentDialog" persistent>
   <q-card style="min-width: 400px">
     <q-card-section>
-      <div class="text-h6">Přidat žáka</div>
+      <h6 class="q-my-none">Přidat žáka</h6>
     </q-card-section>
     <q-card-section>
-      <q-input v-model="newStudent.name" label="Jméno žáka" />
-      <q-input v-model="newStudent.bakalari_url" label="URL Bakalářů (např. https://skola.bakalari.cz)" />
-      <q-input v-model="newStudent.bakalari_username" label="Přihlašovací jméno" />
-      <q-input v-model="newStudent.bakalari_password" label="Heslo" type="password" />
+      <q-select
+        filled
+        v-model="newStudent.wallet"
+        :options="g.user.wallets"
+        option-value="id"
+        option-label="name"
+        emit-value
+        map-options
+        label="Peněženka LNbits"
+      />
+      <q-input
+        filled
+        v-model="newStudent.name"
+        label="Jméno žáka"
+        class="q-mt-sm"
+      />
+      <q-input
+        filled
+        v-model="newStudent.bakalari_url"
+        label="URL Bakalářů (např. https://skola.bakalari.cz)"
+        class="q-mt-sm"
+      />
+      <q-input
+        filled
+        v-model="newStudent.bakalari_username"
+        label="Přihlašovací jméno Bakaláři"
+        class="q-mt-sm"
+      />
+      <q-input
+        filled
+        v-model="newStudent.bakalari_password"
+        label="Heslo Bakaláři"
+        type="password"
+        class="q-mt-sm"
+      />
+      <div class="q-mt-md">
+        <div class="text-subtitle2">Odměna za známku (sats)</div>
+        <div class="row q-col-gutter-sm q-mt-xs">
+          <div class="col-6 col-sm-4">
+            <q-input filled v-model.number="newStudent.reward_grade_1" label="Známka 1 (sat)" type="number" min="0" />
+          </div>
+          <div class="col-6 col-sm-4">
+            <q-input filled v-model.number="newStudent.reward_grade_2" label="Známka 2 (sat)" type="number" min="0" />
+          </div>
+          <div class="col-6 col-sm-4">
+            <q-input filled v-model.number="newStudent.reward_grade_3" label="Známka 3 (sat)" type="number" min="0" />
+          </div>
+          <div class="col-6 col-sm-4">
+            <q-input filled v-model.number="newStudent.reward_grade_4" label="Známka 4 (sat)" type="number" min="0" />
+          </div>
+          <div class="col-6 col-sm-4">
+            <q-input filled v-model.number="newStudent.reward_grade_5" label="Známka 5 (sat)" type="number" min="0" />
+          </div>
+        </div>
+      </div>
     </q-card-section>
     <q-card-actions align="right">
-      <q-btn flat label="Zrušit" v-close-popup />
-      <q-btn color="primary" label="Přidat" @click="createStudent" />
+      <q-btn flat label="Zrušit" @click="showStudentDialog = false" />
+      <q-btn
+        color="primary"
+        label="Přidat"
+        @click="createStudent"
+      />
     </q-card-actions>
   </q-card>
 </q-dialog>
 {% endblock %}
 
 {% block scripts %}
-<script>
   new Vue({
     el: '#vue',
     mixins: [windowMixin],
@@ -78,13 +142,21 @@
         showStudentDialog: false,
         newStudent: {
           name: '',
+          wallet: '',
           bakalari_url: '',
           bakalari_username: '',
-          bakalari_password: ''
+          bakalari_password: '',
+          reward_grade_1: 100,
+          reward_grade_2: 75,
+          reward_grade_3: 50,
+          reward_grade_4: 25,
+          reward_grade_5: 0
         },
         columns: [
           { name: 'name', label: 'Jméno', field: 'name', align: 'left' },
           { name: 'bakalari_url', label: 'URL školy', field: 'bakalari_url', align: 'left' },
+          { name: 'reward_sats', label: 'Odměna za známky', align: 'left' },
+          { name: 'last_check', label: 'Poslední kontrola', field: 'last_check', align: 'left' },
           { name: 'actions', label: 'Akce', align: 'center' }
         ]
       }
@@ -105,15 +177,33 @@
       },
       createStudent: function () {
         var self = this
+        var wallet = this.g.user.wallets.find(function(w) { return w.id === self.newStudent.wallet })
+        if (!wallet) {
+          wallet = this.g.user.wallets[0]
+          self.newStudent.wallet = wallet.id
+        }
         LNbits.api.request(
           'POST',
           '/bakalari_rewards/api/v1/students',
-          this.g.user.wallets[0].adminkey,
+          wallet.adminkey,
           self.newStudent
         ).then(function (response) {
           self.students.push(response.data)
           self.showStudentDialog = false
-          self.newStudent = { name: '', bakalari_url: '', bakalari_username: '', bakalari_password: '' }
+          self.newStudent = {
+            name: '',
+            wallet: '',
+            bakalari_url: '',
+            bakalari_username: '',
+            bakalari_password: '',
+            reward_grade_1: 100,
+            reward_grade_2: 75,
+            reward_grade_3: 50,
+            reward_grade_4: 25,
+            reward_grade_5: 0
+          }
+        }).catch(function(err) {
+          LNbits.utils.notifyApiError(err)
         })
       },
       deleteStudent: function (id) {
@@ -123,10 +213,13 @@
           '/bakalari_rewards/api/v1/students/' + id,
           this.g.user.wallets[0].adminkey
         ).then(function () {
-          self.students = self.students.filter(function (s) { return s.id !== id })
+          self.students = self.students.filter(function (s) {
+            return s.id !== id
+          })
+        }).catch(function(err) {
+          LNbits.utils.notifyApiError(err)
         })
       }
     }
   })
-</script>
 {% endblock %}
