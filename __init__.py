@@ -17,6 +17,9 @@ bakalari_rewards_ext: APIRouter = APIRouter(
 bakalari_rewards_ext.include_router(bakalari_rewards_generic_router)
 bakalari_rewards_ext.include_router(bakalari_rewards_api_router)
 
+# Alias pro LNbits loader
+ext_router = bakalari_rewards_ext
+
 bakalari_rewards_static_files = [
     {
         "path": "/bakalari_rewards/static",
@@ -45,6 +48,7 @@ def bakalari_rewards_start():
 __all__ = [
     "db",
     "bakalari_rewards_ext",
+    "ext_router",
     "bakalari_rewards_start",
     "bakalari_rewards_static_files",
     "bakalari_rewards_stop",
