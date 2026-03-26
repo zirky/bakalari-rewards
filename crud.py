@@ -36,11 +36,6 @@ async def get_all_students() -> List[BakalariStudent]:
     )
 
 
-async def update_student(data: CreateBakalariStudent) -> BakalariStudent:
-    await db.update("bakalari_rewards.students", data)
-    return BakalariStudent(**data.dict())
-
-
 async def delete_student(student_id: str) -> None:
     await db.execute(
         "DELETE FROM bakalari_rewards.students WHERE id = :id",
@@ -48,8 +43,9 @@ async def delete_student(student_id: str) -> None:
     )
 
 
-async def update_last_check(student_id: str, last_check: str) -> None:
+async def update_student_balance(student_id: str, balance: int) -> Optional[BakalariStudent]:
     await db.execute(
-        "UPDATE bakalari_rewards.students SET last_check = :last_check WHERE id = :id",
-        {"last_check": last_check, "id": student_id},
+        "UPDATE bakalari_rewards.students SET balance = :balance WHERE id = :id",
+        {"id": student_id, "balance": balance},
     )
+    return await get_student(student_id)
