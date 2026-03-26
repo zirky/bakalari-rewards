@@ -8,7 +8,7 @@ bakalari_rewards_generic_router = APIRouter()
 
 
 def bakalari_rewards_renderer():
-    return template_renderer(["bakalari_rewards/templates"])
+    return template_renderer(["bakalari_rewards"])
 
 
 @bakalari_rewards_generic_router.get("/", response_class=HTMLResponse)
