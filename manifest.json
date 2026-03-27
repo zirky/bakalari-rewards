@@ -4,7 +4,7 @@
   "short_description": "Odměny v BTC za známky z Bakalářů.",
   "description": "Doplněk propojuje Bakaláře s LNbits.",
   "admin_only": false,
-  "version": "0.6.2",
+  "version": "0.1.3",
   "author": "Zirky",
   "homepage": "https://github.com/zirky/bakalari-rewards",
   "repo": "https://github.com/zirky/bakalari-rewards"
