@@ -21,8 +21,7 @@ window.app = Vue.createApp({
       studentsTable: {
         columns: [
           {name: 'name', align: 'left', label: 'Jméno', field: 'name'},
-          {name: 'bakalari_url', align: 'left', label: 'URL školy', field: 'bakalari_url'},
-          {name: 'rewards', align: 'left', label: 'Odměny (1-5)', field: 'id'},
+          {name: 'bakalari_url', align: 'left', label: 'URL', field: 'bakalari_url'},
           {name: 'last_check', align: 'left', label: 'Poslední kontrola', field: 'last_check'},
           {name: 'id', align: 'right', label: 'Akce', field: 'id'}
         ],
@@ -41,8 +40,7 @@ window.app = Vue.createApp({
     },
     deleteStudent: function (studentId) {
       var self = this
-      var student = _.find(this.students, {id: studentId})
-      LNbits.utils.confirmDialog('Smazat žáka ' + student.name + '?').onOk(function () {
+      LNbits.utils.confirmDialog('Opravdu smazat?').onOk(function () {
         LNbits.api.request('DELETE', '/bakalari_rewards/api/v1/students/' + studentId, self.g.user.wallets[0].adminkey)
           .then(function () {
             self.students = _.reject(self.students, function (obj) { return obj.id === studentId })
