@@ -1,16 +1,11 @@
 {
-  "featured": [],
-  "extensions": [
-    {
-      "id": "bakalari_rewards",
-      "repo": "https://github.com/zirky/bakalari-rewards",
-      "name": "Bakalari Rewards",
-                  "version": "0.6.1",
-      "min_lnbits_version": "0.12.0",
-      "short_description": "Automaticke odmeny v BTC za skolni znamky",
-      "icon": "https://raw.githubusercontent.com/zirky/bakalari-rewards/main/static/image/myextension.png",
-                  "archive": "https://github.com/zirky/bakalari-rewards/archive/refs/tags/v0.5.16.zip",
-      "hash": ""
-    }
-  ]
+  "id": "bakalari_rewards",
+  "name": "Bakalari Rewards",
+  "short_description": "Odměny v BTC za známky z Bakalářů.",
+  "description": "Doplněk propojuje Bakaláře s LNbits.",
+  "admin_only": false,
+  "version": "0.6.2",
+  "author": "Zirky",
+  "homepage": "https://github.com/zirky/bakalari-rewards",
+  "repo": "https://github.com/zirky/bakalari-rewards"
 }
