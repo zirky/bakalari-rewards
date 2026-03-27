@@ -2,7 +2,7 @@
   {
     "id": "bakalari_rewards",
     "name": "Bakalari Rewards",
-    "short_description": "Odměny v BTC za školní výsledky z Bakalářů.",
+    "short_description": "Odměny v BTC za známky z Bakalářů.",
     "description": "Automatické vyplácení odměn v satoshi za známky v systému Bakaláři.",
     "author": "Zirky",
     "icon": "school",
