@@ -1,10 +1,9 @@
 {% extends "base.html" %}
-
 {% from "macros.jinja" import window_vars with context %}
 
 {% block page %}
 <div class="row q-col-gutter-md">
-  <div class="col-12 col-md-8 col-lg-7 q-gutter-y-md">
+  <div class="col-12 col-md-8 q-gutter-y-md">
     <q-card>
       <q-card-section class="q-pa-none">
         <q-table
@@ -12,132 +11,50 @@
           dense
           :rows="students"
           :columns="studentsTable.columns"
-          :pagination="studentsTable.pagination"
           row-key="id"
         >
-          <template v-slot:header="props">
-            <q-tr :props="props">
-              <q-th v-for="col in props.cols" :key="col.name" :props="props">
-                <span v-text="col.label"></span>
-              </q-th>
-            </q-tr>
-          </template>
-
           <template v-slot:body="props">
             <q-tr :props="props">
-              <q-td v-for="col in props.cols" :key="col.name" :props="props">
-                <div v-if="col.name == 'rewards'">
-                  1: <span v-text="props.row.reward_grade_1"></span> sat, 
-                  2: <span v-text="props.row.reward_grade_2"></span> sat, 
-                  3: <span v-text="props.row.reward_grade_3"></span> sat, 
-                  4: <span v-text="props.row.reward_grade_4"></span> sat, 
-                  5: <span v-text="props.row.reward_grade_5"></span> sat
-                </div>
-                <div v-else-if="col.name == 'id'">
-                  <q-btn
-                    flat
-                    round
-                    color="blue"
-                    icon="edit"
-                    size="sm"
-                    @click="openEditDialog(props.row.id)"
-                  >
-                    <q-tooltip>Upravit žáka</q-tooltip>
-                  </q-btn>
-                  <q-btn
-                    flat
-                    round
-                    color="red"
-                    icon="delete"
-                    size="sm"
-                    @click="deleteStudent(props.row.id)"
-                  >
-                    <q-tooltip>Smazat žáka</q-tooltip>
-                  </q-btn>
-                </div>
-                <div v-else v-text="props.row[col.field]"></div>
+              <q-td key="name" :props="props" v-text="props.row.name"></q-td>
+              <q-td key="bakalari_url" :props="props" v-text="props.row.bakalari_url"></q-td>
+              <q-td key="rewards" :props="props">
+                <q-badge color="orange">1: <span v-text="props.row.reward_grade_1"></span></q-badge>
+                <q-badge color="orange" class="q-ml-xs">2: <span v-text="props.row.reward_grade_2"></span></q-badge>
+              </q-td>
+              <q-td key="last_check" :props="props" v-text="props.row.last_check"></q-td>
+              <q-td key="id" :props="props" align="right">
+                <q-btn flat round color="blue" icon="edit" size="sm" @click="openEditDialog(props.row.id)"></q-btn>
+                <q-btn flat round color="red" icon="delete" size="sm" @click="deleteStudent(props.row.id)"></q-btn>
               </q-td>
             </q-tr>
           </template>
         </q-table>
       </q-card-section>
     </q-card>
-  </div>
 
-  <div class="col-12 col-md-4 col-lg-5 q-gutter-y-md">
     <q-card>
       <q-card-section>
-        <h6 class="q-my-none">Bakaláři Rewards</h6>
-        <p class="q-mt-sm">Automatické odměny za známky z Bakalářů.</p>
         <q-btn color="primary" @click="openFormDialog">Přidat žáka</q-btn>
       </q-card-section>
     </q-card>
   </div>
 
   <q-dialog v-model="formDialog.show" position="top">
-    <q-card class="q-pa-lg q-pt-xl" style="width: 500px">
+    <q-card class="q-pa-lg" style="width: 500px">
       <q-form @submit="sendStudentData" class="q-gutter-md">
-        <h6 v-text="formDialog.data.id ? 'Upravit žáka' : 'Přidat žáka'"></h6>
+        <h6 class="q-my-none" v-text="formDialog.data.id ? 'Upravit žáka' : 'Přidat žáka'"></h6>
+        <q-input filled dense v-model="formDialog.data.name" label="Jméno žáka"></q-input>
+        <q-input filled dense v-model="formDialog.data.bakalari_url" label="URL Bakalářů (https://...)"></q-input>
+        <q-input filled dense v-model="formDialog.data.bakalari_username" label="Přihlašovací jméno"></q-input>
+        <q-input filled dense v-model="formDialog.data.bakalari_password" type="password" label="Heslo"></q-input>
         
-        <q-input
-          filled
-          dense
-          v-model.trim="formDialog.data.name"
-          label="Jméno žáka"
-          placeholder="Např. Pepa"
-        ></q-input>
-
-        <q-input
-          filled
-          dense
-          v-model.trim="formDialog.data.bakalari_url"
-          label="URL Bakalářů (včetně https://)"
-          placeholder="https://bakalari.skola.cz"
-        ></q-input>
-
-        <q-input
-          filled
-          dense
-          v-model.trim="formDialog.data.bakalari_username"
-          label="Přihlašovací jméno"
-        ></q-input>
-
-        <q-input
-          filled
-          dense
-          v-model.trim="formDialog.data.bakalari_password"
-          type="password"
-          label="Heslo"
-        ></q-input>
-
         <div class="row q-col-gutter-sm">
-          <div class="col">
-            <q-input filled dense v-model.number="formDialog.data.reward_grade_1" type="number" label="Za 1 (sats)"></q-input>
-          </div>
-          <div class="col">
-            <q-input filled dense v-model.number="formDialog.data.reward_grade_2" type="number" label="Za 2 (sats)"></q-input>
-          </div>
-          <div class="col">
-            <q-input filled dense v-model.number="formDialog.data.reward_grade_3" type="number" label="Za 3 (sats)"></q-input>
-          </div>
-        </div>
-        <div class="row q-col-gutter-sm">
-          <div class="col">
-            <q-input filled dense v-model.number="formDialog.data.reward_grade_4" type="number" label="Za 4 (sats)"></q-input>
-          </div>
-          <div class="col">
-            <q-input filled dense v-model.number="formDialog.data.reward_grade_5" type="number" label="Za 5 (sats)"></q-input>
-          </div>
+            <div class="col"><q-input filled dense v-model.number="formDialog.data.reward_grade_1" type="number" label="Za 1"></q-input></div>
+            <div class="col"><q-input filled dense v-model.number="formDialog.data.reward_grade_2" type="number" label="Za 2"></q-input></div>
         </div>
 
         <div class="row q-mt-lg">
-          <q-btn
-            unelevated
-            color="primary"
-            :disabled="!formDialog.data.name || !formDialog.data.bakalari_url"
-            type="submit"
-            v-text="formDialog.data.id ? 'Uložit změny' : 'Vytvořit žáka'"
-          ></q-btn>
+          <q-btn unelevated color="primary" type="submit">Uložit</q-btn>
           <q-btn v-close-popup flat color="grey" class="q-ml-auto">Zrušit</q-btn>
         </div>
       </q-form>
