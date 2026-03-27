@@ -12,7 +12,6 @@ class CreateBakalariStudent(BaseModel):
     reward_grade_3: int = 50
     reward_grade_4: int = 25
     reward_grade_5: int = 0
-    last_check: Optional[str] = None
 
 class BakalariStudent(BaseModel):
     id: str
