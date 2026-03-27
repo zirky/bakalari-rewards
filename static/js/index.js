@@ -4,6 +4,7 @@ window.app = Vue.createApp({
   data: function () {
     return {
       students: [],
+      // TENTO OBJEKT MUSÍ EXISTOVAT, JINAK TO HODÍ CHYBU 'show'
       formDialog: {
         show: false,
         data: {
@@ -22,9 +23,9 @@ window.app = Vue.createApp({
         columns: [
           {name: 'name', align: 'left', label: 'Jméno', field: 'name'},
           {name: 'bakalari_url', align: 'left', label: 'URL školy', field: 'bakalari_url'},
-          {name: 'rewards', align: 'left', label: 'Odměna za známky'},
+          {name: 'rewards', align: 'left', label: 'Odměna za známky', field: 'id'},
           {name: 'last_check', align: 'left', label: 'Poslední kontrola', field: 'last_check'},
-          {name: 'id', align: 'right', label: 'Akce'}
+          {name: 'id', align: 'right', label: 'Akce', field: 'id'}
         ],
         pagination: {
           rowsPerPage: 10
@@ -33,7 +34,6 @@ window.app = Vue.createApp({
     }
   },
   methods: {
-    // Načtení studentů z DB
     getStudents: function () {
       var self = this
       LNbits.api
@@ -49,8 +49,6 @@ window.app = Vue.createApp({
           LNbits.utils.confirmDialog(error.data.detail)
         })
     },
-
-    // Smazání studenta
     deleteStudent: function (studentId) {
       var self = this
       var student = _.find(this.students, {id: studentId})
@@ -74,16 +72,11 @@ window.app = Vue.createApp({
             })
         })
     },
-
-    // Otevření dialogu pro EDITACI
     openEditDialog: function (studentId) {
       var student = _.find(this.students, {id: studentId})
-      // Uděláme kopii dat, aby se změny v tabulce projevily až po uložení
       this.formDialog.data = _.clone(student)
       this.formDialog.show = true
     },
-
-    // Otevření dialogu pro NOVÉHO žáka
     openFormDialog: function () {
       this.formDialog.data = {
         name: '',
@@ -98,31 +91,20 @@ window.app = Vue.createApp({
       }
       this.formDialog.show = true
     },
-
-    // Odeslání formuláře (Nový i Editace)
     sendStudentData: function () {
       var self = this
       var data = this.formDialog.data
-      
-      // Rozlišíme metodu podle toho, jestli už žák má ID (editace) nebo ne (nový)
       var isUpdate = !!data.id
       var method = isUpdate ? 'PUT' : 'POST'
       var url = '/bakalari_rewards/api/v1/students' + (isUpdate ? '/' + data.id : '')
 
       LNbits.api
-        .request(
-          method,
-          url,
-          this.g.user.wallets[0].adminkey,
-          data
-        )
+        .request(method, url, this.g.user.wallets[0].adminkey, data)
         .then(function (response) {
           if (isUpdate) {
-            // Najdeme v poli a nahradíme upravenými daty
             var idx = _.findIndex(self.students, {id: data.id})
             self.students.splice(idx, 1, response.data)
           } else {
-            // Přidáme nového do pole
             self.students.push(response.data)
           }
           self.formDialog.show = false
