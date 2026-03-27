@@ -1,5 +1,5 @@
-window.PageBakalariRewards = {
-  template: '#page-bakalari-rewards',
+window.app = Vue.createApp({
+  el: '#vue',
   mixins: [windowMixin],
   delimiters: ['${', '}'],
   data: function () {
@@ -86,17 +86,17 @@ window.PageBakalariRewards = {
           LNbits.utils.notifyApiError(err)
         })
     },
-    deleteStudent: function (id) {
+    deleteStudent: function (studentId) {
       var self = this
       LNbits.api
         .request(
           'DELETE',
-          '/bakalari_rewards/api/v1/students/' + id,
+          '/bakalari_rewards/api/v1/students/' + studentId,
           this.g.user.wallets[0].adminkey
         )
         .then(function () {
           self.students = self.students.filter(function (s) {
-            return s.id !== id
+            return s.id !== studentId
           })
         })
         .catch(function (err) {
@@ -104,4 +104,4 @@ window.PageBakalariRewards = {
         })
     }
   }
-}
+})
