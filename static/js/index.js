@@ -1,5 +1,5 @@
-window.app = Vue.createApp({
-  el: '#vue',
+window.PageBakalariRewards = {
+  template: '#page-bakalari-rewards',
   mixins: [windowMixin],
   delimiters: ['${', '}'],
   data: function () {
@@ -104,4 +104,4 @@ window.app = Vue.createApp({
         })
     }
   }
-})
+}
