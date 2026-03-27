@@ -11,7 +11,7 @@ from .crud import (
     delete_student,
     get_student,
     get_students,
-    update_student, # Přidáno
+    update_student, # Tohle tam musíš připsat!
 )
 from .models import BakalariStudent, CreateBakalariStudent
 from .tasks import bakalari_rewards_task
