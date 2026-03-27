@@ -1,9 +1,13 @@
-{
-  "repos": [
-    {
-      "id": "bakalari_rewards",
-      "organisation": "zirky",
-      "repository": "bakalari-rewards"
-    }
-  ]
-}
+[
+  {
+    "id": "bakalari_rewards",
+    "name": "Bakalari Rewards",
+    "short_description": "Odměny v BTC za školní výsledky z Bakalářů.",
+    "description": "Automatické vyplácení odměn v satoshi za známky v systému Bakaláři.",
+    "author": "Zirky",
+    "icon": "school",
+    "homepage": "https://github.com/zirky/bakalari-rewards",
+    "repo": "https://github.com/zirky/bakalari-rewards",
+    "manifest": "https://raw.githubusercontent.com/zirky/bakalari-rewards/main/manifest.json"
+  }
+]
