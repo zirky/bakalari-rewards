@@ -3,8 +3,12 @@ import httpx
 from datetime import datetime, timezone
 from loguru import logger
 
+# Importy z tvého doplňku
 from .crud import get_all_students, update_student_last_check
 
+# Importy z LNbits jádra
+from lnbits.core.services import create_invoice
+from lnbits.db import Database
 
 GRADE_REWARD_MAP = {
     1: "reward_grade_1",
@@ -14,115 +18,151 @@ GRADE_REWARD_MAP = {
     5: "reward_grade_5",
 }
 
-
 async def fetch_bakalari_grades(bakalari_url: str, username: str, password: str):
-    """Prihlasi se do Bakalaru a vrati seznam znamek."""
+    """Přihlásí se do Bakalářů a vrátí seznam známek."""
     base = bakalari_url.rstrip("/")
-    token_url = base + "/api/3/auth"
-    grades_url = base + "/api/3/marks"
+    token_url = f"{base}/api/3/auth"
+    grades_url = f"{base}/api/3/marks"
 
     async with httpx.AsyncClient(timeout=30, verify=False) as client:
-        resp = await client.post(
-            token_url,
-            data={
-                "client_id": "ANDR",
-                "grant_type": "password",
-                "username": username,
-                "password": password,
-            },
-        )
-        resp.raise_for_status()
-        token = resp.json().get("access_token")
-        if not token:
-            raise ValueError("Nepodarilo se ziskat access token z Bakalaru")
+        try:
+            # Autentizace
+            resp = await client.post(
+                token_url,
+                data={
+                    "client_id": "ANDR",
+                    "grant_type": "password",
+                    "username": username,
+                    "password": password,
+                },
+            )
+            resp.raise_for_status()
+            token = resp.json().get("access_token")
+            
+            if not token:
+                raise ValueError("Nepodarilo se ziskat access token z Bakalaru")
 
-        grades_resp = await client.get(
-            grades_url,
-            headers={"Authorization": f"Bearer {token}"},
-        )
-        grades_resp.raise_for_status()
-        return grades_resp.json()
-
+            # Získání známek
+            grades_resp = await client.get(
+                grades_url,
+                headers={"Authorization": f"Bearer {token}"},
+            )
+            grades_resp.raise_for_status()
+            return grades_resp.json()
+        except Exception as e:
+            logger.error(f"Bakalari API Error ({bakalari_url}): {e}")
+            raise
 
 async def send_reward(wallet_id: str, amount_sats: int, memo: str):
-    """Prida satoshi na LNbits penezni ucet studenta (interni kredit)."""
+    """Vytvoří interní platbu v LNbits, která se zapíše do historie a zvýší zůstatek."""
     try:
-        from lnbits.core.crud import get_wallet
-        from lnbits.db import Database
-
-        # Pouzijeme interni DB pro primy update zustatku
-        core_db = Database("database")
-        await core_db.execute(
-            """
-            UPDATE wallets SET balance = balance + :amount
-            WHERE id = :wallet_id
-            """,
-            {"wallet_id": wallet_id, "amount": amount_sats * 1000},
+        # 1. Vytvoření interní faktury (invoice) v LNbits jádru
+        # 'internal=True' zajistí, že se nebude snažit komunikovat s Lightning uzlem
+        payment_hash, payment_request = await create_invoice(
+            wallet_id=wallet_id,
+            amount=amount_sats,
+            memo=memo,
+            internal=True
         )
-        logger.info(f"Odmena {amount_sats} sat pridana na penezni ucet {wallet_id}: {memo}")
+        
+        # 2. Protože jde o "odměnu" (kredit z ničeho), musíme fakturu v DB 
+        # ručně označit jako zaplacenou (pending = false).
+        db = Database("database")
+        await db.execute(
+            """
+            UPDATE payments SET pending = false, amount = :amount
+            WHERE hash = :hash AND wallet = :wallet
+            """,
+            {
+                "amount": amount_sats * 1000, # LNbits ukládá v milisatoshi
+                "hash": payment_hash, 
+                "wallet": wallet_id
+            },
+        )
+        logger.success(f"Odměna {amount_sats} sat připsána do peněženky {wallet_id}: {memo}")
     except Exception as e:
-        logger.warning(f"Chyba pri pridani odmeny: {e}")
-
+        logger.error(f"Chyba při připisování odměny do LNbits: {e}")
 
 async def process_student_grades(student):
-    """Zkontroluje nove znamky studenta a posle odmeny."""
+    """Zkontroluje nové známky studenta a pošle odměny."""
     try:
         grades_data = await fetch_bakalari_grades(
             student.bakalari_url,
             student.bakalari_username,
             student.bakalari_password,
         )
+        
         marks = grades_data.get("Marks", [])
-        last_check = student.last_check
-
-        new_marks = []
-        for mark in marks:
-            mark_date = mark.get("MarkDate") or mark.get("EditDate", "")
-            if last_check and mark_date and mark_date <= last_check:
-                continue
-            new_marks.append(mark)
-
-        if not new_marks:
-            logger.info(f"Student {student.name}: zadne nove znamky")
+        if not marks:
+            logger.info(f"Student {student.name}: Žádné známky v API.")
             return
 
-        for mark in new_marks:
-            grade_str = str(mark.get("MarkText", "")).strip()
-            grade = None
-            if grade_str and grade_str[0].isdigit():
-                grade = int(grade_str[0])
+        # Seřadíme známky podle data vzestupně
+        marks.sort(key=lambda x: x.get("MarkDate", ""))
 
-            if grade is None or grade not in GRADE_REWARD_MAP:
+        new_marks_found = False
+        latest_date = student.last_check
+
+        for mark in marks:
+            mark_date = mark.get("MarkDate")
+            
+            # Pokud už jsme tuhle známku (nebo novější) viděli, přeskočit
+            if student.last_check and mark_date <= student.last_check:
                 continue
 
-            reward_field = GRADE_REWARD_MAP[grade]
-            reward_sats = getattr(student, reward_field, 0)
-            if reward_sats > 0:
-                subject = mark.get("Subject", "")
-                memo = f"Bakalari odmena: {student.name} - {subject} - znamka {grade}"
-                await send_reward(student.wallet, reward_sats, memo)
+            # Extrakce známky (řeší i "1-", "2" atd.)
+            mark_text = str(mark.get("MarkText", "")).strip()
+            if not mark_text or not mark_text[0].isdigit():
+                continue
+            
+            grade = int(mark_text[0])
 
-        now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
-        await update_student_last_check(student.id, now_iso)
-        logger.info(f"Student {student.name}: last_check aktualizovan")
+            if grade in GRADE_REWARD_MAP:
+                reward_field = GRADE_REWARD_MAP[grade]
+                # Získání hodnoty odměny z modelu studenta (např. student.reward_grade_1)
+                reward_sats = getattr(student, reward_field, 0)
+                
+                if reward_sats > 0:
+                    subject = mark.get("SubjectText", "Předmět")
+                    memo = f"Bakaláři odměna: {subject} (známka {grade})"
+                    await send_reward(student.wallet, reward_sats, memo)
+                    new_marks_found = True
+                    # Posuneme lokální kurzor data na tuto známku
+                    if not latest_date or mark_date > latest_date:
+                        latest_date = mark_date
+
+        if new_marks_found:
+            await update_student_last_check(student.id, latest_date)
+            logger.info(f"Student {student.name}: Poslední kontrola aktualizována na {latest_date}")
+        else:
+            logger.info(f"Student {student.name}: Žádné nové známky k vyplacení.")
 
     except Exception as exc:
-        logger.warning(f"Chyba pri zpracovani studenta {student.name}: {exc}")
-
+        logger.warning(f"Chyba při zpracování studenta {student.name}: {exc}")
 
 async def bakalari_rewards_task():
-    """Periodicky kontroluje znamky vsech studentu a posila odmeny."""
+    """Periodicky kontroluje známky všech studentů a posílá odměny."""
     logger.info("Bakalari Rewards task started.")
+    # Počkáme pár sekund po startu, aby se stihly zinicializovat DB tabulky
+    await asyncio.sleep(10)
+    
     while True:
         try:
             students = await get_all_students()
-            logger.info(f"Kontroluji znamky pro {len(students)} studentu")
-            for student in students:
-                await process_student_grades(student)
+            if not students:
+                logger.info("V databázi nejsou žádní studenti ke kontrole.")
+            else:
+                logger.info(f"Spouštím kontrolu pro {len(students)} studentů")
+                for student in students:
+                    await process_student_grades(student)
+            
+            # Kontrola jednou za hodinu (3600s)
             await asyncio.sleep(3600)
+            
         except asyncio.CancelledError:
-            logger.info("Bakalari Rewards task cancelled.")
+            logger.info("Bakalari Rewards task byl ukončen.")
             break
         except Exception as exc:
-            logger.warning(f"Bakalari Rewards task error: {exc}")
+            logger.error(f"Chyba v hlavní smyčce Bakalari Rewards: {exc}")
+            # Při chybě počkáme minutu a zkusíme znovu
             await asyncio.sleep(60)
