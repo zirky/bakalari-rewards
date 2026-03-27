@@ -4,7 +4,7 @@
   "short_description": "Odměny v BTC za školní výsledky z Bakalářů.",
   "description": "Automatické vyplácení odměn v satoshi za známky v systému Bakaláři.",
   "admin_only": false,
-  "version": "0.6.2",
+  "version": "0.6.3",
   "author": "Zirky",
   "homepage": "https://github.com/zirky/bakalari-rewards",
   "repo": "https://github.com/zirky/bakalari-rewards"
