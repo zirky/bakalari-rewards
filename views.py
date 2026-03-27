@@ -6,7 +6,7 @@ from lnbits.helpers import template_renderer
 
 bakalari_rewards_generic_router = APIRouter()
 
-
+# Oprava cesty k šablonám
 def bakalari_rewards_renderer():
     return template_renderer(["bakalari_rewards/templates"])
 
@@ -14,6 +14,9 @@ def bakalari_rewards_renderer():
 @bakalari_rewards_generic_router.get("/", response_class=HTMLResponse)
 async def index(request: Request, user: User = Depends(check_user_exists)):
     return bakalari_rewards_renderer().TemplateResponse(
-        "bakalari_rewards/index.html",
-        {"request": request, "user": user.json()},
+        "index.html", # LNbits už hledá uvnitř složky definované v rendereru
+        {
+            "request": request, 
+            "user": user.dict() # Změna z .json() na .dict() pro správný formát dat
+        },
     )
