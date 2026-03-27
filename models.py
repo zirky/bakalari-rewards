@@ -1,11 +1,9 @@
 from pydantic import BaseModel
 from typing import Optional
 
-
 class CreateBakalariStudent(BaseModel):
-    id: Optional[str] = None
     name: str
-    wallet: str
+    wallet: Optional[str] = None
     bakalari_url: str
     bakalari_username: str
     bakalari_password: str
@@ -15,7 +13,6 @@ class CreateBakalariStudent(BaseModel):
     reward_grade_4: int = 25
     reward_grade_5: int = 0
     last_check: Optional[str] = None
-
 
 class BakalariStudent(BaseModel):
     id: str
