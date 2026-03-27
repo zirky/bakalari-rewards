@@ -4,7 +4,6 @@ window.app = Vue.createApp({
   data: function () {
     return {
       students: [],
-      // TADY DEFINUJEME OBJEKT, KTERÝ CHYBÍ
       formDialog: {
         show: false,
         data: {
@@ -23,7 +22,7 @@ window.app = Vue.createApp({
         columns: [
           {name: 'name', align: 'left', label: 'Jméno', field: 'name'},
           {name: 'bakalari_url', align: 'left', label: 'URL školy', field: 'bakalari_url'},
-          {name: 'rewards', align: 'left', label: 'Odměna za známky', field: 'id'},
+          {name: 'rewards', align: 'left', label: 'Odměny (1-5)', field: 'id'},
           {name: 'last_check', align: 'left', label: 'Poslední kontrola', field: 'last_check'},
           {name: 'id', align: 'right', label: 'Akce', field: 'id'}
         ],
@@ -39,21 +38,16 @@ window.app = Vue.createApp({
         .then(function (response) {
           self.students = response.data
         })
-        .catch(function (error) {
-          LNbits.utils.confirmDialog(error.data.detail)
-        })
     },
     deleteStudent: function (studentId) {
       var self = this
-      LNbits.utils
-        .confirmDialog('Opravdu smazat?')
-        .onOk(function () {
-          LNbits.api
-            .request('DELETE', '/bakalari_rewards/api/v1/students/' + studentId, self.g.user.wallets[0].adminkey)
-            .then(function () {
-              self.students = _.reject(self.students, function (obj) { return obj.id === studentId })
-            })
-        })
+      var student = _.find(this.students, {id: studentId})
+      LNbits.utils.confirmDialog('Smazat žáka ' + student.name + '?').onOk(function () {
+        LNbits.api.request('DELETE', '/bakalari_rewards/api/v1/students/' + studentId, self.g.user.wallets[0].adminkey)
+          .then(function () {
+            self.students = _.reject(self.students, function (obj) { return obj.id === studentId })
+          })
+      })
     },
     openEditDialog: function (studentId) {
       var student = _.find(this.students, {id: studentId})
@@ -74,8 +68,7 @@ window.app = Vue.createApp({
       var method = isUpdate ? 'PUT' : 'POST'
       var url = '/bakalari_rewards/api/v1/students' + (isUpdate ? '/' + data.id : '')
 
-      LNbits.api
-        .request(method, url, this.g.user.wallets[0].adminkey, data)
+      LNbits.api.request(method, url, this.g.user.wallets[0].adminkey, data)
         .then(function (response) {
           if (isUpdate) {
             var idx = _.findIndex(self.students, {id: data.id})
@@ -85,14 +78,9 @@ window.app = Vue.createApp({
           }
           self.formDialog.show = false
         })
-        .catch(function (error) {
-          LNbits.utils.confirmDialog(error.data.detail)
-        })
     }
   },
   created: function () {
-    if (this.g.user.wallets.length) {
-      this.getStudents()
-    }
+    if (this.g.user.wallets.length) { this.getStudents() }
   }
 })
