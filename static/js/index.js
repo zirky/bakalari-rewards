@@ -1,11 +1,9 @@
 window.app = Vue.createApp({
-  el: '#vue',
   mixins: [windowMixin],
   delimiters: ['${', '}'],
   data: function () {
     return {
       students: [],
-      showStudentDialog: false,
       formDialog: {
         show: false,
         data: {
@@ -105,4 +103,4 @@ window.app = Vue.createApp({
         })
     }
   }
-})
+}).mount('#vue')
