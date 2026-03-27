@@ -24,9 +24,7 @@ window.app = Vue.createApp({
           {name: 'bakalari_url', align: 'left', label: 'URL školy', field: 'bakalari_url'},
           {name: 'id', align: 'right', label: 'Akce', field: 'id'}
         ],
-        pagination: {
-          rowsPerPage: 10
-        }
+        pagination: { rowsPerPage: 10 }
       }
     }
   },
@@ -38,21 +36,11 @@ window.app = Vue.createApp({
         .then(function (response) {
           self.students = response.data
         })
-        .catch(function (error) {
-          LNbits.utils.confirmDialog(error.data.detail)
-        })
     },
     openFormDialog: function () {
       this.formDialog.data = {
-        name: '',
-        bakalari_url: '',
-        bakalari_username: '',
-        bakalari_password: '',
-        reward_grade_1: 100,
-        reward_grade_2: 75,
-        reward_grade_3: 50,
-        reward_grade_4: 25,
-        reward_grade_5: 0
+        name: '', bakalari_url: '', bakalari_username: '', bakalari_password: '',
+        reward_grade_1: 100, reward_grade_2: 75, reward_grade_3: 50, reward_grade_4: 25, reward_grade_5: 0
       }
       this.formDialog.show = true
     },
@@ -80,24 +68,16 @@ window.app = Vue.createApp({
     },
     deleteStudent: function (studentId) {
       var self = this
-      var student = _.find(this.students, {id: studentId})
-      LNbits.utils
-        .confirmDialog('Opravdu smazat žáka ' + student.name + '?')
-        .onOk(function () {
-          LNbits.api
-            .request('DELETE', '/bakalari_rewards/api/v1/students/' + studentId, self.g.user.wallets[0].adminkey)
-            .then(function () {
-              self.students = _.reject(self.students, function (obj) { return obj.id === studentId })
-            })
-            .catch(function (error) {
-              LNbits.utils.confirmDialog(error.data.detail)
-            })
-        })
+      LNbits.utils.confirmDialog('Opravdu smazat?').onOk(function () {
+        LNbits.api
+          .request('DELETE', '/bakalari_rewards/api/v1/students/' + studentId, self.g.user.wallets[0].adminkey)
+          .then(function () {
+            self.students = _.reject(self.students, function (obj) { return obj.id === studentId })
+          })
+      })
     }
   },
   created: function () {
-    if (this.g.user.wallets.length) {
-      this.getStudents()
-    }
+    if (this.g.user.wallets.length) { this.getStudents() }
   }
 })
