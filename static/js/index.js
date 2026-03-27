@@ -1,5 +1,5 @@
 window.PageBakalariRewards = {
-  mixins: [window.windowMixin],
+    mixins: [windowMixin],
   data: function () {
     return {
       students: [],
