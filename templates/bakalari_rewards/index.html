@@ -1,138 +1,135 @@
-<!---->
-<!----PAGE FOR THE EXTENSIONS BACKEND IN LNBITS/------>
-<!---->
-
 {% extends "base.html" %} {% from "macros.jinja" import window_vars with context
 %} {% block scripts %} {{ window_vars(user) }}
 <script src="{{ static_url_for('bakalari_rewards/static', path='js/index.js') }}"></script>
 {% endblock %} {% block page %}
-<div class="row q-col-gutter-md" id="bakalari-rewards">
-  <div class="col-12 col-md-8 col-lg-7 q-gutter-y-md">
-    <q-card>
-      <q-card-section>
-        <h5 class="text-subtitle1 q-my-none">
-          <strong>Bakal&aacute;&rcaron;i Rewards</strong> &mdash; Automatick&eacute; odm&ecaron;ny v Bitcoin za &scaron;koln&iacute; zn&aacute;mky
-        </h5>
-      </q-card-section>
-    </q-card>
-
-    <q-card>
-      <q-card-section>
-        <div class="row items-center no-wrap q-mb-md">
-          <div class="col">
-            <h5 class="text-subtitle1 q-my-none">Seznam &zcaron;&aacute;k&#367;</h5>
-          </div>
-          <div class="col-auto">
-            <q-btn
-              flat
-              color="primary"
-              @click="formDialog.show = true"
-              label="P&#345;idat &zcaron;&aacute;ka"
-            />
-          </div>
-        </div>
-        <q-table
-          :rows="students"
-          :columns="studentsTable.columns"
-          row-key="id"
-          no-data-label="Zat&iacute;m &zcaron;&aacute;dn&iacute; &zcaron;&aacute;ci"
-        >
-          <template v-slot:body-cell-reward_sats="props">
-            <q-td auto-width>
-              <span>1: ${ props.row.reward_grade_1 } sat</span>
-              <span class="q-ml-sm">2: ${ props.row.reward_grade_2 } sat</span>
-              <span class="q-ml-sm">3: ${ props.row.reward_grade_3 } sat</span>
-              <span class="q-ml-sm">4: ${ props.row.reward_grade_4 } sat</span>
-              <span class="q-ml-sm">5: ${ props.row.reward_grade_5 } sat</span>
-            </q-td>
-          </template>
-          <template v-slot:body-cell-actions="props">
-            <q-td auto-width>
+<div id="vue">
+  <div class="row q-col-gutter-md">
+    <div class="col-12 col-md-8 col-lg-7 q-gutter-y-md">
+      <q-card>
+        <q-card-section>
+          <h5 class="text-subtitle1 q-my-none">
+            <strong>Bakal&aacute;&rcaron;i Rewards</strong> &mdash; Automatick&eacute; odm&ecaron;ny v Bitcoin za &scaron;koln&iacute; zn&aacute;mky
+          </h5>
+        </q-card-section>
+      </q-card>
+      <q-card>
+        <q-card-section>
+          <div class="row items-center no-wrap q-mb-md">
+            <div class="col">
+              <h5 class="text-subtitle1 q-my-none">Seznam &zcaron;&aacute;k&#367;</h5>
+            </div>
+            <div class="col-auto">
               <q-btn
                 flat
-                dense
-                color="negative"
-                icon="delete"
-                @click="deleteStudent(props.row.id)"
+                color="primary"
+                @click="formDialog.show = true"
+                label="P&rcaron;idat &zcaron;&aacute;ka"
               />
-            </q-td>
-          </template>
-        </q-table>
-      </q-card-section>
-    </q-card>
+            </div>
+          </div>
+          <q-table
+            :rows="students"
+            :columns="studentsTable.columns"
+            row-key="id"
+            no-data-label="Zat&iacute;m &zcaron;&aacute;dn&iacute; &zcaron;&aacute;ci"
+          >
+            <template v-slot:body-cell-reward_sats="props">
+              <q-td auto-width>
+                <span>1: ${ props.row.reward_grade_1 } sat</span>
+                <span class="q-ml-sm">2: ${ props.row.reward_grade_2 } sat</span>
+                <span class="q-ml-sm">3: ${ props.row.reward_grade_3 } sat</span>
+                <span class="q-ml-sm">4: ${ props.row.reward_grade_4 } sat</span>
+                <span class="q-ml-sm">5: ${ props.row.reward_grade_5 } sat</span>
+              </q-td>
+            </template>
+            <template v-slot:body-cell-actions="props">
+              <q-td auto-width>
+                <q-btn
+                  flat
+                  dense
+                  color="negative"
+                  icon="delete"
+                  @click="deleteStudent(props.row.id)"
+                />
+              </q-td>
+            </template>
+          </q-table>
+        </q-card-section>
+      </q-card>
+    </div>
   </div>
-</div>
 
-<q-dialog v-model="formDialog.show" persistent>
-  <q-card style="min-width: 400px">
-    <q-card-section>
-      <h6 class="q-my-none">P&#345;idat &zcaron;&aacute;ka</h6>
-    </q-card-section>
-    <q-card-section>
-      <q-select
-        filled
-        v-model="formDialog.data.wallet"
-        :options="g.user.wallets"
-        option-value="id"
-        option-label="name"
-        emit-value
-        map-options
-        label="Pen&#283;&zcaron;enka LNbits"
-      />
-      <q-input
-        filled
-        v-model="formDialog.data.name"
-        label="Jm&eacute;no &zcaron;&aacute;ka"
-        class="q-mt-sm"
-      />
-      <q-input
-        filled
-        v-model="formDialog.data.bakalari_url"
-        label="URL Bakal&aacute;&rcaron;&#367; (nap&#345;. https://skola.bakalari.cz)"
-        class="q-mt-sm"
-      />
-      <q-input
-        filled
-        v-model="formDialog.data.bakalari_username"
-        label="P&#345;ihla&scaron;ovac&iacute; jm&eacute;no Bakal&aacute;&rcaron;i"
-        class="q-mt-sm"
-      />
-      <q-input
-        filled
-        v-model="formDialog.data.bakalari_password"
-        label="Heslo Bakal&aacute;&rcaron;i"
-        type="password"
-        class="q-mt-sm"
-      />
-      <div class="q-mt-md">
-        <div class="text-subtitle2">Odm&#283;na za zn&aacute;mku (sats)</div>
-        <div class="row q-col-gutter-sm q-mt-xs">
-          <div class="col-6 col-sm-4">
-            <q-input filled v-model.number="formDialog.data.reward_grade_1" label="Zn&aacute;mka 1 (sat)" type="number" min="0" />
-          </div>
-          <div class="col-6 col-sm-4">
-            <q-input filled v-model.number="formDialog.data.reward_grade_2" label="Zn&aacute;mka 2 (sat)" type="number" min="0" />
-          </div>
-          <div class="col-6 col-sm-4">
-            <q-input filled v-model.number="formDialog.data.reward_grade_3" label="Zn&aacute;mka 3 (sat)" type="number" min="0" />
-          </div>
-          <div class="col-6 col-sm-4">
-            <q-input filled v-model.number="formDialog.data.reward_grade_4" label="Zn&aacute;mka 4 (sat)" type="number" min="0" />
-          </div>
-          <div class="col-6 col-sm-4">
-            <q-input filled v-model.number="formDialog.data.reward_grade_5" label="Zn&aacute;mka 5 (sat)" type="number" min="0" />
+  <q-dialog v-model="formDialog.show" persistent>
+    <q-card style="min-width: 400px">
+      <q-card-section>
+        <h6 class="q-my-none">P&rcaron;idat &zcaron;&aacute;ka</h6>
+      </q-card-section>
+      <q-card-section>
+        <q-select
+          filled
+          v-model="formDialog.data.wallet"
+          :options="g.user.wallets"
+          option-value="id"
+          option-label="name"
+          emit-value
+          map-options
+          label="Pen&ecaron;&#382;enka LNbits"
+        />
+        <q-input
+          filled
+          v-model="formDialog.data.name"
+          label="Jm&eacute;no &zcaron;&aacute;ka"
+          class="q-mt-sm"
+        />
+        <q-input
+          filled
+          v-model="formDialog.data.bakalari_url"
+          label="URL Bakal&aacute;&rcaron;&#367; (nap&rcaron;. https://skola.bakalari.cz)"
+          class="q-mt-sm"
+        />
+        <q-input
+          filled
+          v-model="formDialog.data.bakalari_username"
+          label="P&rcaron;ihla&scaron;ovac&iacute; jm&eacute;no Bakal&aacute;&rcaron;i"
+          class="q-mt-sm"
+        />
+        <q-input
+          filled
+          v-model="formDialog.data.bakalari_password"
+          label="Heslo Bakal&aacute;&rcaron;i"
+          type="password"
+          class="q-mt-sm"
+        />
+        <div class="q-mt-md">
+          <div class="text-subtitle2">Odm&ecaron;na za zn&aacute;mku (sats)</div>
+          <div class="row q-col-gutter-sm q-mt-xs">
+            <div class="col-6 col-sm-4">
+              <q-input filled v-model.number="formDialog.data.reward_grade_1" label="Zn&aacute;mka 1 (sat)" type="number" min="0" />
+            </div>
+            <div class="col-6 col-sm-4">
+              <q-input filled v-model.number="formDialog.data.reward_grade_2" label="Zn&aacute;mka 2 (sat)" type="number" min="0" />
+            </div>
+            <div class="col-6 col-sm-4">
+              <q-input filled v-model.number="formDialog.data.reward_grade_3" label="Zn&aacute;mka 3 (sat)" type="number" min="0" />
+            </div>
+            <div class="col-6 col-sm-4">
+              <q-input filled v-model.number="formDialog.data.reward_grade_4" label="Zn&aacute;mka 4 (sat)" type="number" min="0" />
+            </div>
+            <div class="col-6 col-sm-4">
+              <q-input filled v-model.number="formDialog.data.reward_grade_5" label="Zn&aacute;mka 5 (sat)" type="number" min="0" />
+            </div>
           </div>
         </div>
-      </div>
-    </q-card-section>
-    <q-card-actions align="right">
-      <q-btn flat label="Zru&scaron;it" @click="formDialog.show = false" />
-      <q-btn
-        color="primary"
-        label="P&#345;idat"
-        @click="createStudent"
-      />
-    </q-card-actions>
-  </q-card>
-</q-dialog>
+      </q-card-section>
+      <q-card-actions align="right">
+        <q-btn flat label="Zru&scaron;it" @click="formDialog.show = false" />
+        <q-btn
+          color="primary"
+          label="P&rcaron;idat"
+          @click="createStudent"
+        />
+      </q-card-actions>
+    </q-card>
+  </q-dialog>
+</div>
 {% endblock %}
