@@ -3,60 +3,30 @@
 
 {% block page %}
 <div class="row q-col-gutter-md">
-  <div class="col-12 col-md-8 q-gutter-y-md">
+  <div class="col-12 col-md-8">
     <q-card>
-      <q-card-section class="q-pa-none">
+      <q-card-section>
+        <h6 class="q-my-none">Seznam žáků</h6>
         <q-table
           flat
           dense
           :rows="students"
           :columns="studentsTable.columns"
           row-key="id"
-        >
-          <template v-slot:body="props">
-            <q-tr :props="props">
-              <q-td key="name" :props="props" v-text="props.row.name"></q-td>
-              <q-td key="bakalari_url" :props="props" v-text="props.row.bakalari_url"></q-td>
-              <q-td key="rewards" :props="props">
-                <q-badge color="orange">1: <span v-text="props.row.reward_grade_1"></span></q-badge>
-                <q-badge color="orange" class="q-ml-xs">2: <span v-text="props.row.reward_grade_2"></span></q-badge>
-              </q-td>
-              <q-td key="last_check" :props="props" v-text="props.row.last_check"></q-td>
-              <q-td key="id" :props="props" align="right">
-                <q-btn flat round color="blue" icon="edit" size="sm" @click="openEditDialog(props.row.id)"></q-btn>
-                <q-btn flat round color="red" icon="delete" size="sm" @click="deleteStudent(props.row.id)"></q-btn>
-              </q-td>
-            </q-tr>
-          </template>
-        </q-table>
+        ></q-table>
       </q-card-section>
     </q-card>
-
-    <q-card>
-      <q-card-section>
-        <q-btn color="primary" @click="openFormDialog">Přidat žáka</q-btn>
-      </q-card-section>
-    </q-card>
+    <q-btn class="q-mt-md" color="primary" @click="openFormDialog">Přidat žáka</q-btn>
   </div>
 
   <q-dialog v-model="formDialog.show" position="top">
     <q-card class="q-pa-lg" style="width: 500px">
       <q-form @submit="sendStudentData" class="q-gutter-md">
-        <h6 class="q-my-none" v-text="formDialog.data.id ? 'Upravit žáka' : 'Přidat žáka'"></h6>
-        <q-input filled dense v-model="formDialog.data.name" label="Jméno žáka"></q-input>
-        <q-input filled dense v-model="formDialog.data.bakalari_url" label="URL Bakalářů (https://...)"></q-input>
-        <q-input filled dense v-model="formDialog.data.bakalari_username" label="Přihlašovací jméno"></q-input>
-        <q-input filled dense v-model="formDialog.data.bakalari_password" type="password" label="Heslo"></q-input>
-        
-        <div class="row q-col-gutter-sm">
-            <div class="col"><q-input filled dense v-model.number="formDialog.data.reward_grade_1" type="number" label="Za 1"></q-input></div>
-            <div class="col"><q-input filled dense v-model.number="formDialog.data.reward_grade_2" type="number" label="Za 2"></q-input></div>
-        </div>
-
-        <div class="row q-mt-lg">
-          <q-btn unelevated color="primary" type="submit">Uložit</q-btn>
-          <q-btn v-close-popup flat color="grey" class="q-ml-auto">Zrušit</q-btn>
-        </div>
+        <q-input filled v-model="formDialog.data.name" label="Jméno žáka"></q-input>
+        <q-input filled v-model="formDialog.data.bakalari_url" label="URL (https://...)"></q-input>
+        <q-input filled v-model="formDialog.data.bakalari_username" label="Uživatelské jméno"></q-input>
+        <q-input filled v-model="formDialog.data.bakalari_password" type="password" label="Heslo"></q-input>
+        <q-btn unelevated color="primary" type="submit" label="Uložit"></q-btn>
       </q-form>
     </q-card>
   </q-dialog>
