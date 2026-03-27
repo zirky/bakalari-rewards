@@ -1,7 +1,5 @@
-window.app = Vue.createApp({
-  el: '#vue',
-  mixins: [windowMixin],
-  delimiters: ['${', '}'],
+window.PageBakalariRewards = {
+  mixins: [window.windowMixin],
   data: function () {
     return {
       students: [],
@@ -38,11 +36,7 @@ window.app = Vue.createApp({
     getStudents: function () {
       var self = this
       LNbits.api
-        .request(
-          'GET',
-          '/bakalari_rewards/api/v1/students',
-          this.g.user.wallets[0].inkey
-        )
+        .request('GET', '/bakalari_rewards/api/v1/students', this.g.user.wallets[0].inkey)
         .then(function (response) {
           self.students = response.data
         })
@@ -60,48 +54,26 @@ window.app = Vue.createApp({
         self.formDialog.data.wallet = wallet.id
       }
       LNbits.api
-        .request(
-          'POST',
-          '/bakalari_rewards/api/v1/students',
-          wallet.adminkey,
-          self.formDialog.data
-        )
+        .request('POST', '/bakalari_rewards/api/v1/students', wallet.adminkey, self.formDialog.data)
         .then(function (response) {
           self.students.push(response.data)
           self.formDialog.show = false
           self.formDialog.data = {
-            name: '',
-            wallet: '',
-            bakalari_url: '',
-            bakalari_username: '',
-            bakalari_password: '',
-            reward_grade_1: 100,
-            reward_grade_2: 75,
-            reward_grade_3: 50,
-            reward_grade_4: 25,
-            reward_grade_5: 0
+            name: '', wallet: '', bakalari_url: '', bakalari_username: '',
+            bakalari_password: '', reward_grade_1: 100, reward_grade_2: 75,
+            reward_grade_3: 50, reward_grade_4: 25, reward_grade_5: 0
           }
         })
-        .catch(function (err) {
-          LNbits.utils.notifyApiError(err)
-        })
+        .catch(function (err) { LNbits.utils.notifyApiError(err) })
     },
     deleteStudent: function (studentId) {
       var self = this
       LNbits.api
-        .request(
-          'DELETE',
-          '/bakalari_rewards/api/v1/students/' + studentId,
-          this.g.user.wallets[0].adminkey
-        )
+        .request('DELETE', '/bakalari_rewards/api/v1/students/' + studentId, this.g.user.wallets[0].adminkey)
         .then(function () {
-          self.students = self.students.filter(function (s) {
-            return s.id !== studentId
-          })
+          self.students = self.students.filter(function (s) { return s.id !== studentId })
         })
-        .catch(function (err) {
-          LNbits.utils.notifyApiError(err)
-        })
+        .catch(function (err) { LNbits.utils.notifyApiError(err) })
     }
   }
-})
+}
