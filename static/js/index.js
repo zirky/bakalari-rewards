@@ -1,16 +1,16 @@
-// static/js/index.js
+// static/js/index.js - OPRAVENO
 
 window.app = Vue.createApp({
-  el: '#vue',
-  mixins: [window.LNbits.mixins.custom],
+  // Smazáno: el: '#vue' - patří do .mount()
+  mixins: [window.LNbits.mixins.globalMixin],  // ← OPRAVENO: globalMixin místo custom
   data: function () {
     return {
-      // Seznam studentů pro tabulku
       students: [],
-      // Objekt pro dialog (TADY byla ta chyba 'undefined')
       formDialog: {
         show: false,
         data: {
+          name: '',  // ← Přidáno: name pro formulář
+          wallet: null,
           bakalari_url: '',
           bakalari_username: '',
           bakalari_password: '',
@@ -21,12 +21,13 @@ window.app = Vue.createApp({
           reward_grade_5: 0
         }
       },
-      // Nastavení tabulky
       studentsTable: {
         columns: [
           { name: 'name', align: 'left', label: 'Student', field: 'name' },
           { name: 'bakalari_url', align: 'left', label: 'URL školy', field: 'bakalari_url' },
-          { name: 'last_check', align: 'left', label: 'Poslední kontrola', field: 'last_check' }
+          { name: 'last_check', align: 'left', label: 'Poslední kontrola', field: 'last_check' },
+          { name: 'reward_sats', align: 'left', label: 'Odměny (sats)', field: 'reward_sats' },
+          { name: 'actions', align: 'right', label: '', field: 'actions' }
         ],
         pagination: {
           rowsPerPage: 10
@@ -47,14 +48,12 @@ window.app = Vue.createApp({
           self.students = response.data
         })
         .catch(function (error) {
-          LNbits.utils.confirmDialog(error.data.detail)
+          LNbits.utils.notifyApiError(error)
         })
     },
-    sendStudentData: function () {
+    createStudent: function () {
       var self = this
-      // Posíláme to, co je vnořené ve formDialog.data
       var data = this.formDialog.data
-
       LNbits.api
         .request(
           'POST',
@@ -65,12 +64,39 @@ window.app = Vue.createApp({
         .then(function (response) {
           self.students.push(response.data)
           self.formDialog.show = false
-          // Reset dat po úspěchu
-          self.formDialog.data = { reward_grade_1: 10, reward_grade_2: 5 }
+          self.resetForm()
         })
         .catch(function (error) {
-          LNbits.utils.confirmDialog(error.data.detail)
+          LNbits.utils.notifyApiError(error)
         })
+    },
+    deleteStudent: function (id) {
+      var self = this
+      LNbits.utils.confirmDialog('Opravdu smazat?', function () {
+        LNbits.api
+          .request(
+            'DELETE',
+            `/bakalari_rewards/api/v1/students/${id}`,
+            self.g.user.wallets[0].adminkey
+          )
+          .then(function () {
+            self.students = self.students.filter(s => s.id !== id)
+          })
+      })
+    },
+    resetForm: function () {
+      this.formDialog.data = {
+        name: '',
+        wallet: null,
+        bakalari_url: '',
+        bakalari_username: '',
+        bakalari_password: '',
+        reward_grade_1: 10,
+        reward_grade_2: 5,
+        reward_grade_3: 0,
+        reward_grade_4: 0,
+        reward_grade_5: 0
+      }
     }
   },
   created: function () {
@@ -79,3 +105,4 @@ window.app = Vue.createApp({
     }
   }
 })
+window.app.mount('#vue')  // ← KLÍČOVÉ: Mount aplikace!
