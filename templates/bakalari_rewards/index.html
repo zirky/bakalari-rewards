@@ -5,7 +5,6 @@
   <script src="{{ static_url_for('bakalari_rewards/static', path='js/index.js') }}"></script>
 {% endblock %}
 {% block page %}
-{% raw %}
 <div>
   <div class="row q-col-gutter-md q-mb-md">
     <div class="col-12 col-md-8 col-lg-7 q-gutter-y-md">
@@ -39,32 +38,30 @@
           >
             <template v-slot:body-cell-check_period="props">
               <q-td>
-                <q-badge :color="props.row.check_period == 'monthly' ? 'purple' : 'blue'">
-                  {{ props.row.check_period == 'monthly' ? 'Mesicne' : 'Tydne' }}
+                <q-badge :color="props.row.check_period === 'monthly' ? 'purple' : 'blue'">
+                  <span v-if="props.row.check_period === 'monthly'">Mesicne</span>
+                  <span v-else>Tydne</span>
                 </q-badge>
               </q-td>
             </template>
-
-            <template v-slot:body-cell-reward_sats="props">
-              <q-td>
-                <span v-if="props.row.use_czk">
-                  <small>CZK:</small>
-                  1: {{ props.row.reward_grade_1_czk }} Kc
-                  <span class="q-ml-sm">2: {{ props.row.reward_grade_2_czk }} Kc</span>
-                  <span class="q-ml-sm">3: {{ props.row.reward_grade_3_czk }} Kc</span>
-                </span>
-                <span v-else>
-                  1: ${ props.row.reward_grade_1 } sat
-                  <span class="q-ml-sm">2: ${ props.row.reward_grade_2 } sat</span>
-                  <span class="q-ml-sm">3: ${ props.row.reward_grade_3 } sat</span>
-                </span>
-              </q-td>
-            </template>
-
             <template v-slot:body-cell-actions="props">
-              <q-td auto-width>
-                <q-btn flat dense color="primary" icon="edit" @click="openEditDialog(props.row)" />
-                <q-btn flat dense color="negative" icon="delete" @click="deleteStudent(props.row.id)" />
+              <q-td>
+                <q-btn
+                  flat
+                  dense
+                  size="xs"
+                  icon="edit"
+                  color="primary"
+                  @click="openEditDialog(props.row)"
+                />
+                <q-btn
+                  flat
+                  dense
+                  size="xs"
+                  icon="delete"
+                  color="negative"
+                  @click="deleteStudent(props.row.id)"
+                />
               </q-td>
             </template>
           </q-table>
@@ -78,7 +75,10 @@
 <q-dialog v-model="formDialog.show" persistent>
   <q-card style="min-width: 550px; max-width: 90vw">
     <q-card-section>
-      <div class="text-h6">{{ formDialog.editMode ? 'Upravit zaka' : 'Pridat zaka' }}</div>
+      <div class="text-h6">
+        <span v-if="formDialog.editMode">Upravit zaka</span>
+        <span v-else>Pridat zaka</span>
+      </div>
     </q-card-section>
 
     <q-card-section class="q-gutter-sm">
@@ -102,13 +102,34 @@
         dense
       />
 
-      <q-input v-model="formDialog.data.bakalari_url" label="URL Bakalaru" filled dense />
-      <q-input v-model="formDialog.data.bakalari_username" label="Uzivatelske jmeno" filled dense />
-      <q-input v-model="formDialog.data.bakalari_password" label="Heslo" type="password" filled dense />
+      <q-input
+        v-model="formDialog.data.bakalari_url"
+        label="URL Bakalaru"
+        filled
+        dense
+      />
 
-      <div class="row q-mt-sm">
-        <q-toggle v-model="formDialog.data.use_czk" label="Odmeny v CZK (kurz CoinGecko)" />
-      </div>
+      <q-input
+        v-model="formDialog.data.bakalari_username"
+        label="Uzivatelske jmeno"
+        filled
+        dense
+      />
+
+      <q-input
+        v-model="formDialog.data.bakalari_password"
+        label="Heslo"
+        type="password"
+        filled
+        dense
+      />
+
+      <q-toggle
+        v-model="formDialog.data.use_czk"
+        label="Pouzit CZK (prepocitat na SAT dle kurzu BTC)"
+        :true-value="1"
+        :false-value="0"
+      />
 
       <div v-if="!formDialog.data.use_czk" class="q-gutter-xs">
         <div class="text-caption q-mb-xs">Odmeny v SAT za znamky:</div>
@@ -156,9 +177,13 @@
 
     <q-card-actions align="right">
       <q-btn flat label="Zrusit" @click="formDialog.show = false" />
-      <q-btn unelevated color="primary" :label="formDialog.editMode ? 'Ulozit' : 'Pridat'" @click="saveStudent" />
+      <q-btn
+        unelevated
+        color="primary"
+        :label="formDialog.editMode ? 'Ulozit' : 'Pridat'"
+        @click="saveStudent"
+      />
     </q-card-actions>
   </q-card>
 </q-dialog>
-{% endraw %}
 {% endblock %}
