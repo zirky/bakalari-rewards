@@ -39,7 +39,7 @@
             <template v-slot:body-cell-check_period="props">
               <q-td>
                 <q-badge :color="props.row.check_period === 'monthly' ? 'purple' : 'blue'">
-                  {{ props.row.check_period === 'monthly' ? 'Mesicne' : 'Tydne' }}
+                  {{ 'Mesicne' if props.row.check_period == 'monthly' else 'Tydne' }}
                 </q-badge>
               </q-td>
             </template>
