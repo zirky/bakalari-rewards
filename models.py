@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from typing import Optional
+from datetime import datetime
 
 
 class CreateBakalariStudent(BaseModel):
@@ -14,8 +15,7 @@ class CreateBakalariStudent(BaseModel):
     reward_grade_3: int = 50
     reward_grade_4: int = 25
     reward_grade_5: int = 0
-    last_check: Optional[str] = None
-    use_czk: int = 0
+    last_check: Optional[datetime] = None    use_czk: int = 0
     reward_grade_1_czk: float = 0
     reward_grade_2_czk: float = 0
     reward_grade_3_czk: float = 0
@@ -36,8 +36,7 @@ class BakalariStudent(BaseModel):
     reward_grade_3: int
     reward_grade_4: int
     reward_grade_5: int
-    last_check: Optional[str] = None
-    use_czk: int = 0
+    last_check: Optional[datetime] = None    use_czk: int = 0
     reward_grade_1_czk: float = 0
     reward_grade_2_czk: float = 0
     reward_grade_3_czk: float = 0
