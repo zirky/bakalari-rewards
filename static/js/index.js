@@ -1,7 +1,7 @@
-// static/js/index.js
+// static/js/index.js - LNbits 1.5.3 format
 
-window.app = Vue.createApp({
-  mixins: [window.LNbits.mixins.globalMixin],
+window.app = {
+  mixins: [window.windowMixin],
   data: function () {
     return {
       students: [],
@@ -15,7 +15,7 @@ window.app = Vue.createApp({
           bakalari_url: '',
           bakalari_username: '',
           bakalari_password: '',
-          use_czk: false,
+          use_czk: 0,
           reward_grade_1: 100,
           reward_grade_2: 75,
           reward_grade_3: 50,
@@ -32,22 +32,21 @@ window.app = Vue.createApp({
       },
       studentsTable: {
         columns: [
-          { name: 'name', align: 'left', label: 'Student', field: 'name' },
-          { name: 'bakalari_url', align: 'left', label: 'URL skoly', field: 'bakalari_url' },
-          { name: 'check_period', align: 'left', label: 'Frekvence', field: 'check_period' },
-          { name: 'last_check', align: 'left', label: 'Posledni kontrola', field: 'last_check' },
-          { name: 'reward_sats', align: 'left', label: 'Odmeny', field: 'reward_sats' },
-          { name: 'actions', align: 'right', label: '', field: 'actions' }
+          {name: 'name', align: 'left', label: 'Student', field: 'name'},
+          {name: 'bakalari_url', align: 'left', label: 'URL školy', field: 'bakalari_url'},
+          {name: 'check_period', align: 'left', label: 'Frekvence', field: 'check_period'},
+          {name: 'last_check', align: 'left', label: 'Poslední kontrola', field: 'last_check'},
+          {name: 'reward_sats', align: 'left', label: 'Odměny', field: 'reward_sats'},
+          {name: 'actions', align: 'right', label: '', field: 'actions'}
         ],
-        pagination: { rowsPerPage: 10 }
+        pagination: {rowsPerPage: 10}
       }
     }
   },
   methods: {
     getStudents: function () {
       var self = this
-      LNbits.api
-        .request('GET', '/bakalari_rewards/api/v1/students', this.g.user.wallets[0].adminkey)
+      LNbits.api.request('GET', '/bakalari_rewards/api/v1/students', this.g.user.wallets[0].adminkey)
         .then(function (response) {
           self.students = response.data
         })
@@ -68,17 +67,17 @@ window.app = Vue.createApp({
         bakalari_url: student.bakalari_url,
         bakalari_username: student.bakalari_username,
         bakalari_password: student.bakalari_password,
-        use_czk: student.use_czk === 1,
+        use_czk: student.use_czk,
         reward_grade_1: student.reward_grade_1,
         reward_grade_2: student.reward_grade_2,
         reward_grade_3: student.reward_grade_3,
         reward_grade_4: student.reward_grade_4,
         reward_grade_5: student.reward_grade_5,
-        reward_grade_1_czk: student.reward_grade_1_czk,
-        reward_grade_2_czk: student.reward_grade_2_czk,
-        reward_grade_3_czk: student.reward_grade_3_czk,
-        reward_grade_4_czk: student.reward_grade_4_czk,
-        reward_grade_5_czk: student.reward_grade_5_czk,
+        reward_grade_1_czk: student.reward_grade_1_czk || 0,
+        reward_grade_2_czk: student.reward_grade_2_czk || 0,
+        reward_grade_3_czk: student.reward_grade_3_czk || 0,
+        reward_grade_4_czk: student.reward_grade_4_czk || 0,
+        reward_grade_5_czk: student.reward_grade_5_czk || 0,
         check_period: student.check_period || 'weekly',
         last_check: student.last_check
       }
@@ -95,9 +94,7 @@ window.app = Vue.createApp({
     createStudent: function () {
       var self = this
       var data = Object.assign({}, this.formDialog.data)
-      data.use_czk = data.use_czk ? 1 : 0
-      LNbits.api
-        .request('POST', '/bakalari_rewards/api/v1/students', this.g.user.wallets[0].adminkey, data)
+      LNbits.api.request('POST', '/bakalari_rewards/api/v1/students', this.g.user.wallets[0].adminkey, data)
         .then(function (response) {
           self.students.push(response.data)
           self.formDialog.show = false
@@ -110,12 +107,12 @@ window.app = Vue.createApp({
     updateStudent: function () {
       var self = this
       var data = Object.assign({}, this.formDialog.data)
-      data.use_czk = data.use_czk ? 1 : 0
-      LNbits.api
-        .request('PUT', `/bakalari_rewards/api/v1/students/${data.id}`, this.g.user.wallets[0].adminkey, data)
+      LNbits.api.request('PUT', '/bakalari_rewards/api/v1/students/' + data.id, this.g.user.wallets[0].adminkey, data)
         .then(function (response) {
-          var idx = self.students.findIndex(s => s.id === data.id)
-          if (idx !== -1) self.students.splice(idx, 1, response.data)
+          var idx = self.students.findIndex(function(s) { return s.id === data.id })
+          if (idx !== -1) {
+            self.students.splice(idx, 1, response.data)
+          }
           self.formDialog.show = false
           self.resetForm()
         })
@@ -126,15 +123,14 @@ window.app = Vue.createApp({
     deleteStudent: function (id) {
       var self = this
       LNbits.utils.confirmDialog('Opravdu smazat?', function () {
-        LNbits.api
-          .request('DELETE', `/bakalari_rewards/api/v1/students/${id}`, self.g.user.wallets[0].adminkey)
+        LNbits.api.request('DELETE', '/bakalari_rewards/api/v1/students/' + id, self.g.user.wallets[0].adminkey)
           .then(function () {
-            self.students = self.students.filter(s => s.id !== id)
+            self.students = self.students.filter(function(s) { return s.id !== id })
           })
       })
     },
     periodLabel: function (period) {
-      return period === 'monthly' ? 'Mesicne' : 'Tydne'
+      return period === 'monthly' ? 'Měsíčně' : 'Týdně'
     },
     resetForm: function () {
       this.formDialog.data = {
@@ -144,7 +140,7 @@ window.app = Vue.createApp({
         bakalari_url: '',
         bakalari_username: '',
         bakalari_password: '',
-        use_czk: false,
+        use_czk: 0,
         reward_grade_1: 100,
         reward_grade_2: 75,
         reward_grade_3: 50,
@@ -165,5 +161,4 @@ window.app = Vue.createApp({
       this.getStudents()
     }
   }
-})
-window.app.mount('#vue')
+}
