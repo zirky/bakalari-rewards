@@ -1,6 +1,5 @@
 # Migrations file - nikdy nemaž, pouze přidávej!
 
-
 async def m001_initial(db):
     """
     Vytvoří tabulku pro žáky Bakaláři Rewards.
@@ -22,4 +21,31 @@ async def m001_initial(db):
             last_check TEXT
         )
         """
+    )
+
+
+async def m002_add_czk_and_period(db):
+    """
+    Přidá sloupce pro CZK měnu, frekvenci kontroly a poslední kontrolu.
+    """
+    await db.execute(
+        "ALTER TABLE bakalari_rewards.students ADD COLUMN use_czk INTEGER DEFAULT 0"
+    )
+    await db.execute(
+        "ALTER TABLE bakalari_rewards.students ADD COLUMN reward_grade_1_czk REAL DEFAULT 0"
+    )
+    await db.execute(
+        "ALTER TABLE bakalari_rewards.students ADD COLUMN reward_grade_2_czk REAL DEFAULT 0"
+    )
+    await db.execute(
+        "ALTER TABLE bakalari_rewards.students ADD COLUMN reward_grade_3_czk REAL DEFAULT 0"
+    )
+    await db.execute(
+        "ALTER TABLE bakalari_rewards.students ADD COLUMN reward_grade_4_czk REAL DEFAULT 0"
+    )
+    await db.execute(
+        "ALTER TABLE bakalari_rewards.students ADD COLUMN reward_grade_5_czk REAL DEFAULT 0"
+    )
+    await db.execute(
+        "ALTER TABLE bakalari_rewards.students ADD COLUMN check_period TEXT DEFAULT 'weekly'"
     )
