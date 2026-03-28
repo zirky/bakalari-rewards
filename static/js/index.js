@@ -1,37 +1,45 @@
-// static/js/index.js - OPRAVENO
+// static/js/index.js
 
 window.app = Vue.createApp({
-  // Smazáno: el: '#vue' - patří do .mount()
-  mixins: [window.LNbits.mixins.globalMixin],  // ← OPRAVENO: globalMixin místo custom
+  mixins: [window.LNbits.mixins.globalMixin],
   data: function () {
     return {
       students: [],
       formDialog: {
         show: false,
+        editMode: false,
         data: {
-          name: '',  // ← Přidáno: name pro formulář
+          id: null,
+          name: '',
           wallet: null,
           bakalari_url: '',
           bakalari_username: '',
           bakalari_password: '',
-          reward_grade_1: 10,
-          reward_grade_2: 5,
-          reward_grade_3: 0,
-          reward_grade_4: 0,
-          reward_grade_5: 0
+          use_czk: false,
+          reward_grade_1: 100,
+          reward_grade_2: 75,
+          reward_grade_3: 50,
+          reward_grade_4: 25,
+          reward_grade_5: 0,
+          reward_grade_1_czk: 0,
+          reward_grade_2_czk: 0,
+          reward_grade_3_czk: 0,
+          reward_grade_4_czk: 0,
+          reward_grade_5_czk: 0,
+          check_period: 'weekly',
+          last_check: null
         }
       },
       studentsTable: {
         columns: [
           { name: 'name', align: 'left', label: 'Student', field: 'name' },
-          { name: 'bakalari_url', align: 'left', label: 'URL školy', field: 'bakalari_url' },
-          { name: 'last_check', align: 'left', label: 'Poslední kontrola', field: 'last_check' },
-          { name: 'reward_sats', align: 'left', label: 'Odměny (sats)', field: 'reward_sats' },
+          { name: 'bakalari_url', align: 'left', label: 'URL skoly', field: 'bakalari_url' },
+          { name: 'check_period', align: 'left', label: 'Frekvence', field: 'check_period' },
+          { name: 'last_check', align: 'left', label: 'Posledni kontrola', field: 'last_check' },
+          { name: 'reward_sats', align: 'left', label: 'Odmeny', field: 'reward_sats' },
           { name: 'actions', align: 'right', label: '', field: 'actions' }
         ],
-        pagination: {
-          rowsPerPage: 10
-        }
+        pagination: { rowsPerPage: 10 }
       }
     }
   },
@@ -39,11 +47,7 @@ window.app = Vue.createApp({
     getStudents: function () {
       var self = this
       LNbits.api
-        .request(
-          'GET',
-          '/bakalari_rewards/api/v1/students',
-          this.g.user.wallets[0].adminkey
-        )
+        .request('GET', '/bakalari_rewards/api/v1/students', this.g.user.wallets[0].adminkey)
         .then(function (response) {
           self.students = response.data
         })
@@ -51,18 +55,67 @@ window.app = Vue.createApp({
           LNbits.utils.notifyApiError(error)
         })
     },
+    openAddDialog: function () {
+      this.resetForm()
+      this.formDialog.editMode = false
+      this.formDialog.show = true
+    },
+    openEditDialog: function (student) {
+      this.formDialog.data = {
+        id: student.id,
+        name: student.name,
+        wallet: student.wallet,
+        bakalari_url: student.bakalari_url,
+        bakalari_username: student.bakalari_username,
+        bakalari_password: student.bakalari_password,
+        use_czk: student.use_czk === 1,
+        reward_grade_1: student.reward_grade_1,
+        reward_grade_2: student.reward_grade_2,
+        reward_grade_3: student.reward_grade_3,
+        reward_grade_4: student.reward_grade_4,
+        reward_grade_5: student.reward_grade_5,
+        reward_grade_1_czk: student.reward_grade_1_czk,
+        reward_grade_2_czk: student.reward_grade_2_czk,
+        reward_grade_3_czk: student.reward_grade_3_czk,
+        reward_grade_4_czk: student.reward_grade_4_czk,
+        reward_grade_5_czk: student.reward_grade_5_czk,
+        check_period: student.check_period || 'weekly',
+        last_check: student.last_check
+      }
+      this.formDialog.editMode = true
+      this.formDialog.show = true
+    },
+    saveStudent: function () {
+      if (this.formDialog.editMode) {
+        this.updateStudent()
+      } else {
+        this.createStudent()
+      }
+    },
     createStudent: function () {
       var self = this
-      var data = this.formDialog.data
+      var data = Object.assign({}, this.formDialog.data)
+      data.use_czk = data.use_czk ? 1 : 0
       LNbits.api
-        .request(
-          'POST',
-          '/bakalari_rewards/api/v1/students',
-          this.g.user.wallets[0].adminkey,
-          data
-        )
+        .request('POST', '/bakalari_rewards/api/v1/students', this.g.user.wallets[0].adminkey, data)
         .then(function (response) {
           self.students.push(response.data)
+          self.formDialog.show = false
+          self.resetForm()
+        })
+        .catch(function (error) {
+          LNbits.utils.notifyApiError(error)
+        })
+    },
+    updateStudent: function () {
+      var self = this
+      var data = Object.assign({}, this.formDialog.data)
+      data.use_czk = data.use_czk ? 1 : 0
+      LNbits.api
+        .request('PUT', `/bakalari_rewards/api/v1/students/${data.id}`, this.g.user.wallets[0].adminkey, data)
+        .then(function (response) {
+          var idx = self.students.findIndex(s => s.id === data.id)
+          if (idx !== -1) self.students.splice(idx, 1, response.data)
           self.formDialog.show = false
           self.resetForm()
         })
@@ -74,28 +127,36 @@ window.app = Vue.createApp({
       var self = this
       LNbits.utils.confirmDialog('Opravdu smazat?', function () {
         LNbits.api
-          .request(
-            'DELETE',
-            `/bakalari_rewards/api/v1/students/${id}`,
-            self.g.user.wallets[0].adminkey
-          )
+          .request('DELETE', `/bakalari_rewards/api/v1/students/${id}`, self.g.user.wallets[0].adminkey)
           .then(function () {
             self.students = self.students.filter(s => s.id !== id)
           })
       })
     },
+    periodLabel: function (period) {
+      return period === 'monthly' ? 'Mesicne' : 'Tydne'
+    },
     resetForm: function () {
       this.formDialog.data = {
+        id: null,
         name: '',
         wallet: null,
         bakalari_url: '',
         bakalari_username: '',
         bakalari_password: '',
-        reward_grade_1: 10,
-        reward_grade_2: 5,
-        reward_grade_3: 0,
-        reward_grade_4: 0,
-        reward_grade_5: 0
+        use_czk: false,
+        reward_grade_1: 100,
+        reward_grade_2: 75,
+        reward_grade_3: 50,
+        reward_grade_4: 25,
+        reward_grade_5: 0,
+        reward_grade_1_czk: 0,
+        reward_grade_2_czk: 0,
+        reward_grade_3_czk: 0,
+        reward_grade_4_czk: 0,
+        reward_grade_5_czk: 0,
+        check_period: 'weekly',
+        last_check: null
       }
     }
   },
@@ -105,4 +166,4 @@ window.app = Vue.createApp({
     }
   }
 })
-window.app.mount('#vue')  // ← KLÍČOVÉ: Mount aplikace!
+window.app.mount('#vue')
