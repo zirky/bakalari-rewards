@@ -5,6 +5,7 @@
   <script src="{{ static_url_for('bakalari_rewards/static', path='js/index.js') }}"></script>
 {% endblock %}
 {% block page %}
+{% raw %}
 <div>
   <div class="row q-col-gutter-md q-mb-md">
     <div class="col-12 col-md-8 col-lg-7 q-gutter-y-md">
@@ -38,11 +39,9 @@
           >
             <template v-slot:body-cell-check_period="props">
               <q-td>
-                            {% raw %}
-<q-badge :color="props.row.check_period == 'monthly' ? 'purple' : 'blue'">
-                                {{ props.row.check_period == 'monthly' ? 'Mesicne' : 'Tydne' }}
+                <q-badge :color="props.row.check_period == 'monthly' ? 'purple' : 'blue'">
+                  {{ props.row.check_period == 'monthly' ? 'Mesicne' : 'Tydne' }}
                 </q-badge>
-                            {% endraw %}
               </q-td>
             </template>
 
@@ -161,5 +160,5 @@
     </q-card-actions>
   </q-card>
 </q-dialog>
-
+{% endraw %}
 {% endblock %}
