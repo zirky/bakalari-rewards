@@ -49,3 +49,34 @@ async def m002_add_czk_and_period(db):
     await db.execute(
         "ALTER TABLE bakalari_rewards.students ADD COLUMN check_period TEXT DEFAULT 'weekly'"
     )
+
+
+async def m003_convert_last_check_datetime(db):
+    """
+    Převod pole last_check z TEXT na skutečný timestamp.
+    """
+    await db.execute(
+        "ALTER TABLE bakalari_rewards.students ADD COLUMN last_check_new TIMESTAMP"
+    )
+    
+    # Zkopírování dat z textového pole do timestamp pole (pokud jsou validní)
+    await db.execute(
+        """
+        UPDATE bakalari_rewards.students 
+        SET last_check_new = CASE 
+            WHEN last_check IS NOT NULL AND last_check != '' 
+            THEN datetime(last_check) 
+            ELSE NULL 
+        END
+        """
+    )
+    
+    # Smazání starého sloupce
+    await db.execute(
+        "ALTER TABLE bakalari_rewards.students DROP COLUMN last_check"
+    )
+    
+    # Přejmenování nového sloupce
+    await db.execute(
+        "ALTER TABLE bakalari_rewards.students RENAME COLUMN last_check_new TO last_check"
+    )
