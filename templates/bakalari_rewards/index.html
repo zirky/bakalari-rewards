@@ -8,10 +8,11 @@
 <div>
   <div class="row q-col-gutter-md q-mb-md">
     <div class="col-12 col-md-8 col-lg-7 q-gutter-y-md">
+
       <q-card>
         <q-card-section>
           <h5 class="text-subtitle1 q-my-none">
-            <strong>Bakáláři Rewards</strong> &mdash; Automatické odměny v Bitcoin za školní známky
+            <strong>Bakalari Rewards</strong> &mdash; Automaticke odmeny v Bitcoin za skolni znamky
           </h5>
         </q-card-section>
       </q-card>
@@ -20,100 +21,143 @@
         <q-card-section>
           <div class="row items-center no-wrap q-mb-md">
             <div class="col">
-              <h5 class="text-subtitle1 q-my-none">Seznam žáků</h5>
+              <h5 class="text-subtitle1 q-my-none">Seznam zaku</h5>
             </div>
             <div class="col-auto">
-              <q-btn unelevated color="primary" @click="formDialog.show = true" label="Přidat žáka" />
+              <q-btn unelevated color="primary" @click="openAddDialog" label="Pridat zaka" />
             </div>
           </div>
+
           <q-table
             dense
             flat
             :rows="students"
             :columns="studentsTable.columns"
             row-key="id"
-            no-data-label="Zatím žádní žáci"
+            no-data-label="Zatim zadni zaci"
           >
-            <template v-slot:body-cell-reward_sats="props">
+            <template v-slot:body-cell-check_period="props">
               <q-td>
-                <span>1: ${ props.row.reward_grade_1 } sat</span>
-                <span class="q-ml-sm">2: ${ props.row.reward_grade_2 } sat</span>
-                <span class="q-ml-sm">3: ${ props.row.reward_grade_3 } sat</span>
-                <span class="q-ml-sm">4: ${ props.row.reward_grade_4 } sat</span>
-                <span class="q-ml-sm">5: ${ props.row.reward_grade_5 } sat</span>
+                <q-badge :color="props.row.check_period === 'monthly' ? 'purple' : 'blue'">
+                  {{ props.row.check_period === 'monthly' ? 'Mesicne' : 'Tydne' }}
+                </q-badge>
               </q-td>
             </template>
+
+            <template v-slot:body-cell-reward_sats="props">
+              <q-td>
+                <span v-if="props.row.use_czk">
+                  <small>CZK:</small>
+                  1: {{ props.row.reward_grade_1_czk }} Kc
+                  <span class="q-ml-sm">2: {{ props.row.reward_grade_2_czk }} Kc</span>
+                  <span class="q-ml-sm">3: {{ props.row.reward_grade_3_czk }} Kc</span>
+                </span>
+                <span v-else>
+                  1: ${ props.row.reward_grade_1 } sat
+                  <span class="q-ml-sm">2: ${ props.row.reward_grade_2 } sat</span>
+                  <span class="q-ml-sm">3: ${ props.row.reward_grade_3 } sat</span>
+                </span>
+              </q-td>
+            </template>
+
             <template v-slot:body-cell-actions="props">
               <q-td auto-width>
+                <q-btn flat dense color="primary" icon="edit" @click="openEditDialog(props.row)" />
                 <q-btn flat dense color="negative" icon="delete" @click="deleteStudent(props.row.id)" />
               </q-td>
             </template>
           </q-table>
         </q-card-section>
       </q-card>
+
     </div>
   </div>
+</div>
 
-  <q-dialog v-model="formDialog.show" persistent>
-    <q-card style="min-width: 550px; max-width: 90vw">
-      <q-card-section class="row items-center">
-        <div class="text-h6">Přidat žáka</div>
-        <q-space />
-        <q-btn icon="close" flat round dense @click="formDialog.show = false" />
-      </q-card-section>
-      <q-separator />
-      <q-card-section style="max-height: 70vh" class="scroll">
-        <q-input
-          v-model="formDialog.data.name"
-          label="Jméno žáka"
-          filled
-          class="q-mb-md"
-        />
+<q-dialog v-model="formDialog.show" persistent>
+  <q-card style="min-width: 550px; max-width: 90vw">
+    <q-card-section>
+      <div class="text-h6">{{ formDialog.editMode ? 'Upravit zaka' : 'Pridat zaka' }}</div>
+    </q-card-section>
+
+    <q-card-section class="q-gutter-sm">
+
+      <q-input
+        v-model="formDialog.data.name"
+        label="Jmeno zaka"
+        filled
+        dense
+      />
+
+      <q-select
+        v-model="formDialog.data.wallet"
+        :options="g.user.wallets"
+        label="Penezenka"
+        option-value="id"
+        option-label="name"
+        emit-value
+        map-options
+        filled
+        dense
+      />
+
+      <q-input v-model="formDialog.data.bakalari_url" label="URL Bakalaru" filled dense />
+      <q-input v-model="formDialog.data.bakalari_username" label="Uzivatelske jmeno" filled dense />
+      <q-input v-model="formDialog.data.bakalari_password" label="Heslo" type="password" filled dense />
+
+      <div class="row q-mt-sm">
+        <q-toggle v-model="formDialog.data.use_czk" label="Odmeny v CZK (kurz CoinGecko)" />
+      </div>
+
+      <div v-if="!formDialog.data.use_czk" class="q-gutter-xs">
+        <div class="text-caption q-mb-xs">Odmeny v SAT za znamky:</div>
+        <div class="row q-gutter-sm">
+          <q-input v-model.number="formDialog.data.reward_grade_1" label="Zn. 1 (sat)" type="number" filled dense style="width:90px" />
+          <q-input v-model.number="formDialog.data.reward_grade_2" label="Zn. 2 (sat)" type="number" filled dense style="width:90px" />
+          <q-input v-model.number="formDialog.data.reward_grade_3" label="Zn. 3 (sat)" type="number" filled dense style="width:90px" />
+          <q-input v-model.number="formDialog.data.reward_grade_4" label="Zn. 4 (sat)" type="number" filled dense style="width:90px" />
+          <q-input v-model.number="formDialog.data.reward_grade_5" label="Zn. 5 (sat)" type="number" filled dense style="width:90px" />
+        </div>
+      </div>
+
+      <div v-if="formDialog.data.use_czk" class="q-gutter-xs">
+        <div class="text-caption q-mb-xs">Odmeny v CZK za znamky (prepocita se na SAT dle kurzu BTC):</div>
+        <div class="row q-gutter-sm">
+          <q-input v-model.number="formDialog.data.reward_grade_1_czk" label="Zn. 1 (Kc)" type="number" filled dense style="width:90px" />
+          <q-input v-model.number="formDialog.data.reward_grade_2_czk" label="Zn. 2 (Kc)" type="number" filled dense style="width:90px" />
+          <q-input v-model.number="formDialog.data.reward_grade_3_czk" label="Zn. 3 (Kc)" type="number" filled dense style="width:90px" />
+          <q-input v-model.number="formDialog.data.reward_grade_4_czk" label="Zn. 4 (Kc)" type="number" filled dense style="width:90px" />
+          <q-input v-model.number="formDialog.data.reward_grade_5_czk" label="Zn. 5 (Kc)" type="number" filled dense style="width:90px" />
+        </div>
+      </div>
+
+      <div class="row q-mt-sm">
         <q-select
-          v-model="formDialog.data.wallet"
-          :options="g.user.wallets"
-          option-value="id"
-          option-label="name"
+          v-model="formDialog.data.check_period"
+          :options="[
+            { label: 'Tydne', value: 'weekly' },
+            { label: 'Mesicne', value: 'monthly' }
+          ]"
+          label="Frekvence kontroly znamek"
           emit-value
           map-options
-          label="Peněženka"
           filled
-          class="q-mb-md"
+          dense
+          style="min-width: 200px"
         />
-        <q-input
-          v-model="formDialog.data.bakalari_url"
-          label="URL Bakálářů (např. https://skola.cz/nextcloud)"
-          filled
-          class="q-mb-md"
-        />
-        <q-input
-          v-model="formDialog.data.bakalari_username"
-          label="Přihlašovací jméno"
-          filled
-          class="q-mb-md"
-        />
-        <q-input
-          v-model="formDialog.data.bakalari_password"
-          label="Heslo"
-          type="password"
-          filled
-          class="q-mb-md"
-        />
-        <div class="text-subtitle2 q-mb-sm">Odměna za známku (sats)</div>
-        <div class="row q-gutter-sm">
-          <q-input v-model.number="formDialog.data.reward_grade_1" label="Známka 1" type="number" filled style="width:100px" />
-          <q-input v-model.number="formDialog.data.reward_grade_2" label="Známka 2" type="number" filled style="width:100px" />
-          <q-input v-model.number="formDialog.data.reward_grade_3" label="Známka 3" type="number" filled style="width:100px" />
-          <q-input v-model.number="formDialog.data.reward_grade_4" label="Známka 4" type="number" filled style="width:100px" />
-          <q-input v-model.number="formDialog.data.reward_grade_5" label="Známka 5" type="number" filled style="width:100px" />
-        </div>
-      </q-card-section>
-      <q-separator />
-      <q-card-actions align="right" class="q-pa-md">
-        <q-btn flat label="Zrušit" @click="formDialog.show = false" />
-        <q-btn unelevated color="primary" label="Uložit žáka" @click="createStudent" />
-      </q-card-actions>
-    </q-card>
-  </q-dialog>
-</div>
+      </div>
+
+      <div v-if="formDialog.editMode" class="q-mt-sm">
+        <q-input v-model="formDialog.data.last_check" label="Posledni kontrola (rucne uprava)" filled dense />
+      </div>
+
+    </q-card-section>
+
+    <q-card-actions align="right">
+      <q-btn flat label="Zrusit" @click="formDialog.show = false" />
+      <q-btn unelevated color="primary" :label="formDialog.editMode ? 'Ulozit' : 'Pridat'" @click="saveStudent" />
+    </q-card-actions>
+  </q-card>
+</q-dialog>
+
 {% endblock %}
