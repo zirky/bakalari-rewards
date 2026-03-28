@@ -47,15 +47,12 @@ async def fetch_bakalari_grades(bakalari_url: str, username: str, password: str)
 async def send_reward(wallet_id: str, amount_sats: int, memo: str):
     """Prida satoshi na LNbits penezni ucet studenta (interni kredit)."""
     try:
-        from lnbits.core.crud import get_wallet
         from lnbits.db import Database
 
-        # Pouzijeme interni DB pro primy update zustatku
         core_db = Database("database")
         await core_db.execute(
             """
-            UPDATE wallets SET balance = balance + :amount
-            WHERE id = :wallet_id
+            UPDATE wallets SET balance = balance + :amount WHERE id = :wallet_id
             """,
             {"wallet_id": wallet_id, "amount": amount_sats * 1000},
         )
@@ -73,13 +70,24 @@ async def process_student_grades(student):
             student.bakalari_password,
         )
         marks = grades_data.get("Marks", [])
-        last_check = student.last_check
+        last_check = student.last_check  # Optional[datetime] or None
 
         new_marks = []
         for mark in marks:
-            mark_date = mark.get("MarkDate") or mark.get("EditDate", "")
-            if last_check and mark_date and mark_date <= last_check:
-                continue
+            mark_date_str = mark.get("MarkDate") or mark.get("EditDate", "")
+            if last_check and mark_date_str:
+                # Bakalari vraci datum ve formatu ISO 8601, napr. "2025-03-01T12:00:00+01:00"
+                # Porovname jako datetime objekt
+                try:
+                    # Odstranime casovou zonu pro jednodussi porovnani
+                    mark_dt_str = mark_date_str[:19]  # "2025-03-01T12:00:00"
+                    mark_dt = datetime.strptime(mark_dt_str, "%Y-%m-%dT%H:%M:%S")
+                    # last_check muze byt datetime s nebo bez timezone
+                    lc = last_check.replace(tzinfo=None) if last_check.tzinfo else last_check
+                    if mark_dt <= lc:
+                        continue
+                except Exception:
+                    pass  # Pokud se datum nepodarilo parsovat, znamku zahrneme
             new_marks.append(mark)
 
         if not new_marks:
@@ -91,10 +99,8 @@ async def process_student_grades(student):
             grade = None
             if grade_str and grade_str[0].isdigit():
                 grade = int(grade_str[0])
-
             if grade is None or grade not in GRADE_REWARD_MAP:
                 continue
-
             reward_field = GRADE_REWARD_MAP[grade]
             reward_sats = getattr(student, reward_field, 0)
             if reward_sats > 0:
