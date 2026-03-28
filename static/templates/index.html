@@ -38,6 +38,9 @@
             </template>
             <template v-slot:body-cell-actions="props">
               <q-td auto-width>
+                          <q-btn flat dense color="primary" icon="edit" @click="openEditDialog(props.row)">
+                                        <q-tooltip>Upravit</q-tooltip>
+                                      </q-btn>
                 <q-btn flat dense color="negative" icon="delete" @click="deleteStudent(props.row.id)" />
               </q-td>
             </template>
