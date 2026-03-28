@@ -38,9 +38,11 @@
           >
             <template v-slot:body-cell-check_period="props">
               <q-td>
-                <q-badge :color="props.row.check_period === 'monthly' ? 'purple' : 'blue'">
-                  {{ 'Mesicne' if props.row.check_period == 'monthly' else 'Tydne' }}
+                            {% raw %}
+<q-badge :color="props.row.check_period == 'monthly' ? 'purple' : 'blue'">
+                                {{ props.row.check_period == 'monthly' ? 'Mesicne' : 'Tydne' }}
                 </q-badge>
+                            {% endraw %}
               </q-td>
             </template>
 
