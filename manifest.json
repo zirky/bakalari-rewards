@@ -8,7 +8,7 @@
       "version": "0.5.23",
       "min_lnbits_version": "0.12.0",
       "short_description": "Automaticke odmeny v BTC za skolni znamky",
-      "icon": "https://raw.githubusercontent.com/zirky/bakalari-rewards/main/static/image/myextension.png",
+      "icon": "https://raw.githubusercontent.com/zirky/bakalari-rewards/main/static/image/eduimage.png",
       "archive": "https://github.com/zirky/bakalari-rewards/archive/refs/tags/v0.5.23.zip",
       "hash": ""
     }
