@@ -22,6 +22,13 @@ async def create_student(data: CreateBakalariStudent) -> BakalariStudent:
         reward_grade_4=data.reward_grade_4,
         reward_grade_5=data.reward_grade_5,
         last_check=data.last_check,
+        use_czk=data.use_czk,
+        reward_grade_1_czk=data.reward_grade_1_czk,
+        reward_grade_2_czk=data.reward_grade_2_czk,
+        reward_grade_3_czk=data.reward_grade_3_czk,
+        reward_grade_4_czk=data.reward_grade_4_czk,
+        reward_grade_5_czk=data.reward_grade_5_czk,
+        check_period=data.check_period,
     )
     await db.insert("bakalari_rewards.students", student)
     return student
@@ -70,7 +77,14 @@ async def update_student(data: CreateBakalariStudent) -> Optional[BakalariStuden
             reward_grade_2 = :reward_grade_2,
             reward_grade_3 = :reward_grade_3,
             reward_grade_4 = :reward_grade_4,
-            reward_grade_5 = :reward_grade_5
+            reward_grade_5 = :reward_grade_5,
+            use_czk = :use_czk,
+            reward_grade_1_czk = :reward_grade_1_czk,
+            reward_grade_2_czk = :reward_grade_2_czk,
+            reward_grade_3_czk = :reward_grade_3_czk,
+            reward_grade_4_czk = :reward_grade_4_czk,
+            reward_grade_5_czk = :reward_grade_5_czk,
+            check_period = :check_period
         WHERE id = :id
         """,
         {
@@ -85,6 +99,13 @@ async def update_student(data: CreateBakalariStudent) -> Optional[BakalariStuden
             "reward_grade_3": data.reward_grade_3,
             "reward_grade_4": data.reward_grade_4,
             "reward_grade_5": data.reward_grade_5,
+            "use_czk": data.use_czk,
+            "reward_grade_1_czk": data.reward_grade_1_czk,
+            "reward_grade_2_czk": data.reward_grade_2_czk,
+            "reward_grade_3_czk": data.reward_grade_3_czk,
+            "reward_grade_4_czk": data.reward_grade_4_czk,
+            "reward_grade_5_czk": data.reward_grade_5_czk,
+            "check_period": data.check_period,
         },
     )
     return await get_student(data.id)
@@ -93,8 +114,7 @@ async def update_student(data: CreateBakalariStudent) -> Optional[BakalariStuden
 async def update_student_last_check(student_id: str, last_check: str) -> None:
     await db.execute(
         """
-        UPDATE bakalari_rewards.students SET last_check = :last_check
-        WHERE id = :id
+        UPDATE bakalari_rewards.students SET last_check = :last_check WHERE id = :id
         """,
         {"id": student_id, "last_check": last_check},
     )
