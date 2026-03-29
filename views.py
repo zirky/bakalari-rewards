@@ -12,7 +12,13 @@ def bakalari_rewards_renderer():
 
 @bakalari_rewards_generic_router.get("/", response_class=HTMLResponse)
 async def index(request: Request, user: User = Depends(check_user_exists)):
+    user_dict = {
+        "id": user.id,
+        "email": user.email if hasattr(user, 'email') else None,
+        "username": user.username if hasattr(user, 'username') else None,
+        "admin": user.admin if hasattr(user, 'admin') else False,
+    }
     return bakalari_rewards_renderer().TemplateResponse(
         "bakalari_rewards/index.html",
-        {"request": request, "user": json.loads(user.json())},
+        {"request": request, "user": user_dict},
     )
