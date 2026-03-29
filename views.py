@@ -13,5 +13,5 @@ def bakalari_rewards_renderer():
 async def index(request: Request, user: User = Depends(check_user_exists)):
     return bakalari_rewards_renderer().TemplateResponse(
         "bakalari_rewards/index.html",
-        {"request": request, "user": user.dict()},  # ← OPRAVENO: user.dict() místo user.json()
+        {"request": request, "user": user.model_dump()},  # ← OPRAVENO: user.dict() místo user.json()
     )
