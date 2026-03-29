@@ -162,3 +162,8 @@ window.app = {
     }
   }
 }
+
+// Register component for LNbits 1.5.3
+if (window.app && window.app.component) {
+  window.app.component('bakalari-rewards', window.app.components['bakalari-rewards'])
+}
