@@ -18,7 +18,8 @@ async def index(request: Request, user: User = Depends(check_user_exists)):
         "username": user.username if hasattr(user, 'username') else None,
         "admin": user.admin if hasattr(user, 'admin') else False,
     }
+    
     return bakalari_rewards_renderer().TemplateResponse(
         "bakalari_rewards/index.html",
-        {"request": request, "user": user_dict},
+        {"request": request, "user": json.dumps(user_dict)},
     )
