@@ -12,5 +12,6 @@ def bakalari_rewards_renderer():
 @bakalari_rewards_generic_router.get("/", response_class=HTMLResponse)
 async def index(request: Request, user: User = Depends(check_user_exists)):
     return bakalari_rewards_renderer().TemplateResponse(
-        request,
+        "bakalari_rewards/index.html",
+        {"request": request, "user": user.json()},
     )
