@@ -1,3 +1,4 @@
+import json
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
 from lnbits.core.models import User
@@ -13,5 +14,5 @@ def bakalari_rewards_renderer():
 async def index(request: Request, user: User = Depends(check_user_exists)):
     return bakalari_rewards_renderer().TemplateResponse(
         "bakalari_rewards/index.html",
-        {"request": request, "user": user.json()},
+        {"request": request, "user": json.loads(user.json())},
     )
