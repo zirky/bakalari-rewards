@@ -13,12 +13,10 @@ window.app = Vue.createApp({
         data: {
           id: null,
           name: '',
-          wallet: null,
           bakalari_url: '',
           bakalari_username: '',
           bakalari_password: '',
-          use_czk: 0,
-          withdraw_link: null,
+          reward_unit: 'sat',
           reward_grade_1: 100,
           reward_grade_2: 75,
           reward_grade_3: 50,
@@ -37,7 +35,9 @@ window.app = Vue.createApp({
           smtp_user: '',
           smtp_pass: '',
           smtp_port: 465,
-          lnbits_withdraw_key: ''
+          lnbits_withdraw_key: '',
+          withdraw_link: null,
+          czk_deficit: 0
         }
       },
       studentsTable: {
@@ -74,12 +74,10 @@ window.app = Vue.createApp({
       this.formDialog.data = {
         id: student.id,
         name: student.name,
-        wallet: student.wallet,
-        withdraw_link: student.withdraw_link,
         bakalari_url: student.bakalari_url,
         bakalari_username: student.bakalari_username,
         bakalari_password: student.bakalari_password,
-        use_czk: student.use_czk,
+        reward_unit: student.reward_unit || 'sat',
         reward_grade_1: student.reward_grade_1,
         reward_grade_2: student.reward_grade_2,
         reward_grade_3: student.reward_grade_3,
@@ -91,14 +89,16 @@ window.app = Vue.createApp({
         reward_grade_4_czk: student.reward_grade_4_czk || 0,
         reward_grade_5_czk: student.reward_grade_5_czk || 0,
         check_period: student.check_period || 'weekly',
-        last_check: student.last_check,
+        last_check: student.last_check || null,
         email: student.email || '',
         payout_method: student.payout_method || 'email',
         smtp_host: student.smtp_host || '',
         smtp_user: student.smtp_user || '',
         smtp_pass: student.smtp_pass || '',
         smtp_port: student.smtp_port || 465,
-        lnbits_withdraw_key: student.lnbits_withdraw_key || ''
+        lnbits_withdraw_key: student.lnbits_withdraw_key || '',
+        withdraw_link: student.withdraw_link || null,
+        czk_deficit: student.czk_deficit || 0
       }
       this.formDialog.editMode = true
       this.formDialog.show = true
@@ -172,12 +172,10 @@ window.app = Vue.createApp({
       this.formDialog.data = {
         id: null,
         name: '',
-        wallet: null,
         bakalari_url: '',
         bakalari_username: '',
         bakalari_password: '',
-        use_czk: 0,
-        withdraw_link: null,
+        reward_unit: 'sat',
         reward_grade_1: 100,
         reward_grade_2: 75,
         reward_grade_3: 50,
@@ -196,7 +194,9 @@ window.app = Vue.createApp({
         smtp_user: '',
         smtp_pass: '',
         smtp_port: 465,
-        lnbits_withdraw_key: ''
+        lnbits_withdraw_key: '',
+        withdraw_link: null,
+        czk_deficit: 0
       }
     }
   },
