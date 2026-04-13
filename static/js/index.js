@@ -49,8 +49,7 @@ window.app = Vue.createApp({
   methods: {
     getStudents: function () {
       var self = this
-feat: add withdraw_link field support in frontend JS        .request('GET', '/bakalari_rewards/api/v1/students', this.g.user.wallets[0].adminkey)
-        .then(function (response) {
+      LNbits.api        .then(function (response) {
           self.students = response.data
         })
         .catch(function (error) {
