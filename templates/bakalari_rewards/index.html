@@ -84,6 +84,7 @@
       <q-input v-model="formDialog.data.bakalari_password" label="Heslo" type="password" filled class="q-mb-md"></q-input>
       <div class="text-subtitle2 q-mb-sm">Odměna za známku (sats)</div>
       <div class="row q-gutter-sm">
+                    <q-input v-model="formDialog.data.withdraw_link" label="LNURL-withdraw link (volitelné)" filled class="q-mb-md"></q-input>
         <q-input v-model.number="formDialog.data.reward_grade_1" label="Známka 1" type="number" filled style="width:100px"></q-input>
         <q-input v-model.number="formDialog.data.reward_grade_2" label="Známka 2" type="number" filled style="width:100px"></q-input>
         <q-input v-model.number="formDialog.data.reward_grade_3" label="Známka 3" type="number" filled style="width:100px"></q-input>
