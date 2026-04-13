@@ -18,6 +18,7 @@ window.app = Vue.createApp({
           bakalari_username: '',
           bakalari_password: '',
           use_czk: 0,
+                        withdraw_link: null,
           reward_grade_1: 100,
           reward_grade_2: 75,
           reward_grade_3: 50,
@@ -48,8 +49,7 @@ window.app = Vue.createApp({
   methods: {
     getStudents: function () {
       var self = this
-      LNbits.api
-        .request('GET', '/bakalari_rewards/api/v1/students', this.g.user.wallets[0].adminkey)
+feat: add withdraw_link field support in frontend JS        .request('GET', '/bakalari_rewards/api/v1/students', this.g.user.wallets[0].adminkey)
         .then(function (response) {
           self.students = response.data
         })
@@ -67,6 +67,7 @@ window.app = Vue.createApp({
         id: student.id,
         name: student.name,
         wallet: student.wallet,
+                withdraw_link: student.withdraw_link,
         bakalari_url: student.bakalari_url,
         bakalari_username: student.bakalari_username,
         bakalari_password: student.bakalari_password,
