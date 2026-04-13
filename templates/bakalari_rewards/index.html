@@ -82,21 +82,45 @@
       <q-input v-model="formDialog.data.bakalari_url" label="URL Bakálářů" filled class="q-mb-md"></q-input>
       <q-input v-model="formDialog.data.bakalari_username" label="Přihlašovací jméno" filled class="q-mb-md"></q-input>
       <q-input v-model="formDialog.data.bakalari_password" label="Heslo" type="password" filled class="q-mb-md"></q-input>
+
       <div class="text-subtitle2 q-mb-sm">Odměna za známku (sats)</div>
       <div class="row q-gutter-sm">
-                    <q-input v-model="formDialog.data.withdraw_link" label="LNURL-withdraw link (volitelné)" filled class="q-mb-md"></q-input>
+        <q-input v-model.number="formDialog.data.withdraw_link" label="LNURL-withdraw link (volitelné)" filled class="q-mb-md"></q-input>
         <q-input v-model.number="formDialog.data.reward_grade_1" label="Známka 1" type="number" filled style="width:100px"></q-input>
         <q-input v-model.number="formDialog.data.reward_grade_2" label="Známka 2" type="number" filled style="width:100px"></q-input>
         <q-input v-model.number="formDialog.data.reward_grade_3" label="Známka 3" type="number" filled style="width:100px"></q-input>
         <q-input v-model.number="formDialog.data.reward_grade_4" label="Známka 4" type="number" filled style="width:100px"></q-input>
         <q-input v-model.number="formDialog.data.reward_grade_5" label="Známka 5" type="number" filled style="width:100px"></q-input>
       </div>
+
+      <div class="text-subtitle2 q-mt-md q-mb-sm">Výplata</div>
+      <q-select
+        v-model="formDialog.data.payout_method"
+        :options="[{label: 'Email', value: 'email'}, {label: 'LNbits Withdraw', value: 'lnbits'}]"
+        option-value="value"
+        option-label="label"
+        emit-value
+        map-options
+        label="Metoda výplaty"
+        filled
+        class="q-mb-md"
+      ></q-select>
+      <q-input v-model="formDialog.data.email" label="Email žáka" filled class="q-mb-md"></q-input>
+      <q-input v-model="formDialog.data.lnbits_withdraw_key" label="LNbits Withdraw API klíč" filled class="q-mb-md"></q-input>
+
+      <div class="text-subtitle2 q-mt-md q-mb-sm">SMTP konfigurace (pro email výplaty)</div>
+      <q-input v-model="formDialog.data.smtp_host" label="SMTP Host" filled class="q-mb-md"></q-input>
+      <div class="row q-gutter-sm">
+        <q-input v-model="formDialog.data.smtp_user" label="SMTP Uživatel" filled class="col"></q-input>
+        <q-input v-model="formDialog.data.smtp_pass" label="SMTP Heslo" type="password" filled class="col"></q-input>
+        <q-input v-model.number="formDialog.data.smtp_port" label="Port" type="number" filled style="width:100px"></q-input>
+      </div>
     </q-card-section>
 
-    <q-card-section class="row justify-end q-pt-none">
-      <q-btn flat label="Zrušit" @click="formDialog.show = false" class="q-mr-sm"></q-btn>
+    <q-card-actions align="right">
+      <q-btn flat label="Zrušit" @click="formDialog.show = false"></q-btn>
       <q-btn unelevated color="primary" label="Uložit žáka" @click="saveStudent"></q-btn>
-    </q-card-section>
+    </q-card-actions>
   </q-card>
 </q-dialog>
 {% endblock %}
