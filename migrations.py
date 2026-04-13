@@ -80,3 +80,19 @@ async def m003_convert_last_check_datetime(db):
     await db.execute(
         "ALTER TABLE bakalari_rewards.students RENAME COLUMN last_check_new TO last_check"
     )
+
+
+async def m004_add_processed_marks(db):
+    """
+    Vytvori tabulku pro zaznamy zpracovatych znamek (deduplication).
+    """
+    await db.execute(
+        """
+        CREATE TABLE IF NOT EXISTS bakalari_rewards.processed_marks (
+            student_id TEXT NOT NULL,
+            mark_hash  TEXT NOT NULL,
+            processed_at TEXT NOT NULL,
+            PRIMARY KEY (student_id, mark_hash)
+        )
+        """
+    )
