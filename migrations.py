@@ -96,3 +96,14 @@ async def m004_add_processed_marks(db):
         )
         """
     )
+
+
+
+async def m005_add_withdraw_link(db):
+    """
+    Prida sloupec withdraw_link pro LNURL-withdraw odkaz studenta.
+    Wallet pole zustava ale stava se volitelnym.
+    """
+    await db.execute(
+        "ALTER TABLE bakalari_rewards.students ADD COLUMN withdraw_link TEXT DEFAULT NULL"
+    )
