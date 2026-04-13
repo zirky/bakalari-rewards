@@ -48,7 +48,8 @@ window.app = Vue.createApp({
   methods: {
     getStudents: function () {
       var self = this
-      LNbits.api.request('GET', '/bakalari_rewards/api/v1/students', this.g.user.wallets[0].adminkey)
+      LNbits.api
+        .request('GET', '/bakalari_rewards/api/v1/students', this.g.user.wallets[0].adminkey)
         .then(function (response) {
           self.students = response.data
         })
@@ -96,7 +97,8 @@ window.app = Vue.createApp({
     createStudent: function () {
       var self = this
       var data = Object.assign({}, this.formDialog.data)
-      LNbits.api.request('POST', '/bakalari_rewards/api/v1/students', this.g.user.wallets[0].adminkey, data)
+      LNbits.api
+        .request('POST', '/bakalari_rewards/api/v1/students', this.g.user.wallets[0].adminkey, data)
         .then(function (response) {
           self.students.push(response.data)
           self.formDialog.show = false
@@ -109,9 +111,17 @@ window.app = Vue.createApp({
     updateStudent: function () {
       var self = this
       var data = Object.assign({}, this.formDialog.data)
-      LNbits.api.request('PUT', '/bakalari_rewards/api/v1/students/' + data.id, this.g.user.wallets[0].adminkey, data)
+      LNbits.api
+        .request(
+          'PUT',
+          '/bakalari_rewards/api/v1/students/' + data.id,
+          this.g.user.wallets[0].adminkey,
+          data
+        )
         .then(function (response) {
-          var idx = self.students.findIndex(function(s) { return s.id === data.id })
+          var idx = self.students.findIndex(function (s) {
+            return s.id === data.id
+          })
           if (idx !== -1) {
             self.students.splice(idx, 1, response.data)
           }
@@ -124,12 +134,25 @@ window.app = Vue.createApp({
     },
     deleteStudent: function (id) {
       var self = this
-      LNbits.utils.confirmDialog('Opravdu smazat?', function () {
-        LNbits.api.request('DELETE', '/bakalari_rewards/api/v1/students/' + id, self.g.user.wallets[0].adminkey)
-          .then(function () {
-            self.students = self.students.filter(function(s) { return s.id !== id })
-          })
-      })
+      // LNbits 1.5.3: confirmDialog vraci Promise (Quasar Dialog), pouzij .onOk()
+      LNbits.utils
+        .confirmDialog('Opravdu chcete smazat tohoto žáka?')
+        .onOk(function () {
+          LNbits.api
+            .request(
+              'DELETE',
+              '/bakalari_rewards/api/v1/students/' + id,
+              self.g.user.wallets[0].adminkey
+            )
+            .then(function () {
+              self.students = self.students.filter(function (s) {
+                return s.id !== id
+              })
+            })
+            .catch(function (error) {
+              LNbits.utils.notifyApiError(error)
+            })
+        })
     },
     periodLabel: function (period) {
       return period === 'monthly' ? 'Měsíčně' : 'Týdně'
