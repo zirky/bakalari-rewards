@@ -50,6 +50,7 @@ window.app = Vue.createApp({
     getStudents: function () {
       var self = this
       LNbits.api        .then(function (response) {
+                .request('GET', '/bakalari_rewards/api/v1/students', this.g.user.wallets[0].adminkey)
           self.students = response.data
         })
         .catch(function (error) {
