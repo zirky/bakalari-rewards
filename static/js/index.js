@@ -30,7 +30,14 @@ window.app = Vue.createApp({
           reward_grade_4_czk: 0,
           reward_grade_5_czk: 0,
           check_period: 'weekly',
-          last_check: null
+          last_check: null,
+          email: '',
+          payout_method: 'email',
+          smtp_host: '',
+          smtp_user: '',
+          smtp_pass: '',
+          smtp_port: 465,
+          lnbits_withdraw_key: ''
         }
       },
       studentsTable: {
@@ -84,7 +91,14 @@ window.app = Vue.createApp({
         reward_grade_4_czk: student.reward_grade_4_czk || 0,
         reward_grade_5_czk: student.reward_grade_5_czk || 0,
         check_period: student.check_period || 'weekly',
-        last_check: student.last_check
+        last_check: student.last_check,
+        email: student.email || '',
+        payout_method: student.payout_method || 'email',
+        smtp_host: student.smtp_host || '',
+        smtp_user: student.smtp_user || '',
+        smtp_pass: student.smtp_pass || '',
+        smtp_port: student.smtp_port || 465,
+        lnbits_withdraw_key: student.lnbits_withdraw_key || ''
       }
       this.formDialog.editMode = true
       this.formDialog.show = true
@@ -175,7 +189,14 @@ window.app = Vue.createApp({
         reward_grade_4_czk: 0,
         reward_grade_5_czk: 0,
         check_period: 'weekly',
-        last_check: null
+        last_check: null,
+        email: '',
+        payout_method: 'email',
+        smtp_host: '',
+        smtp_user: '',
+        smtp_pass: '',
+        smtp_port: 465,
+        lnbits_withdraw_key: ''
       }
     }
   },
