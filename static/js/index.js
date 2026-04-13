@@ -18,7 +18,7 @@ window.app = Vue.createApp({
           bakalari_username: '',
           bakalari_password: '',
           use_czk: 0,
-                        withdraw_link: null,
+          withdraw_link: null,
           reward_grade_1: 100,
           reward_grade_2: 75,
           reward_grade_3: 50,
@@ -49,8 +49,9 @@ window.app = Vue.createApp({
   methods: {
     getStudents: function () {
       var self = this
-      LNbits.api        .then(function (response) {
-                .request('GET', '/bakalari_rewards/api/v1/students', this.g.user.wallets[0].adminkey)
+      LNbits.api
+        .request('GET', '/bakalari_rewards/api/v1/students', this.g.user.wallets[0].adminkey)
+        .then(function (response) {
           self.students = response.data
         })
         .catch(function (error) {
@@ -67,7 +68,7 @@ window.app = Vue.createApp({
         id: student.id,
         name: student.name,
         wallet: student.wallet,
-                withdraw_link: student.withdraw_link,
+        withdraw_link: student.withdraw_link,
         bakalari_url: student.bakalari_url,
         bakalari_username: student.bakalari_username,
         bakalari_password: student.bakalari_password,
@@ -120,9 +121,7 @@ window.app = Vue.createApp({
           data
         )
         .then(function (response) {
-          var idx = self.students.findIndex(function (s) {
-            return s.id === data.id
-          })
+          var idx = self.students.findIndex(function (s) { return s.id === data.id })
           if (idx !== -1) {
             self.students.splice(idx, 1, response.data)
           }
@@ -135,7 +134,6 @@ window.app = Vue.createApp({
     },
     deleteStudent: function (id) {
       var self = this
-      // LNbits 1.5.3: confirmDialog vraci Promise (Quasar Dialog), pouzij .onOk()
       LNbits.utils
         .confirmDialog('Opravdu chcete smazat tohoto žáka?')
         .onOk(function () {
@@ -146,9 +144,7 @@ window.app = Vue.createApp({
               self.g.user.wallets[0].adminkey
             )
             .then(function () {
-              self.students = self.students.filter(function (s) {
-                return s.id !== id
-              })
+              self.students = self.students.filter(function (s) { return s.id !== id })
             })
             .catch(function (error) {
               LNbits.utils.notifyApiError(error)
@@ -167,6 +163,7 @@ window.app = Vue.createApp({
         bakalari_username: '',
         bakalari_password: '',
         use_czk: 0,
+        withdraw_link: null,
         reward_grade_1: 100,
         reward_grade_2: 75,
         reward_grade_3: 50,
