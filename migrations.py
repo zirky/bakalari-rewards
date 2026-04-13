@@ -115,6 +115,15 @@ async def m006_add_email_payout_deficit(db):
     await db.execute(
         "ALTER TABLE bakalari_rewards.students ADD COLUMN smtp_port INTEGER DEFAULT 465"
     )
+
+
+async def m007_add_reward_unit(db):
+    """
+    Přidá sloupec reward_unit pro volbu měny odměny (sat nebo czk).
+    """
+    await db.execute(
+        "ALTER TABLE bakalari_rewards.students ADD COLUMN reward_unit TEXT DEFAULT 'sat'"
+    )
     # lnbits_withdraw_adminkey: API klic pro withdraw extension
     await db.execute(
         "ALTER TABLE bakalari_rewards.students ADD COLUMN lnbits_withdraw_key TEXT DEFAULT NULL"
