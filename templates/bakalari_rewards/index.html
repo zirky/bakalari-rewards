@@ -33,13 +33,25 @@
           row-key="id"
           no-data-label="Zatím žádní žáci"
         >
+          <template v-slot:body-cell-check_period="props">
+            <q-td>${ periodLabel(props.row.check_period) }</q-td>
+          </template>
           <template v-slot:body-cell-reward_sats="props">
             <q-td>
-              <span>1: ${ props.row.reward_grade_1 } sat</span>
-              <span class="q-ml-sm">2: ${ props.row.reward_grade_2 } sat</span>
-              <span class="q-ml-sm">3: ${ props.row.reward_grade_3 } sat</span>
-              <span class="q-ml-sm">4: ${ props.row.reward_grade_4 } sat</span>
-              <span class="q-ml-sm">5: ${ props.row.reward_grade_5 } sat</span>
+              <span v-if="props.row.reward_unit === 'czk'">
+                1: ${ props.row.reward_grade_1_czk } Kč
+                <span class="q-ml-sm">2: ${ props.row.reward_grade_2_czk } Kč</span>
+                <span class="q-ml-sm">3: ${ props.row.reward_grade_3_czk } Kč</span>
+                <span class="q-ml-sm">4: ${ props.row.reward_grade_4_czk } Kč</span>
+                <span class="q-ml-sm">5: ${ props.row.reward_grade_5_czk } Kč</span>
+              </span>
+              <span v-else>
+                1: ${ props.row.reward_grade_1 } sat
+                <span class="q-ml-sm">2: ${ props.row.reward_grade_2 } sat</span>
+                <span class="q-ml-sm">3: ${ props.row.reward_grade_3 } sat</span>
+                <span class="q-ml-sm">4: ${ props.row.reward_grade_4 } sat</span>
+                <span class="q-ml-sm">5: ${ props.row.reward_grade_5 } sat</span>
+              </span>
             </q-td>
           </template>
           <template v-slot:body-cell-actions="props">
@@ -57,7 +69,7 @@
 </div>
 
 <q-dialog v-model="formDialog.show" persistent>
-  <q-card style="min-width: 550px; max-width: 90vw">
+  <q-card style="min-width: 580px; max-width: 92vw">
     <q-card-section>
       <div class="row items-center no-wrap">
         <div class="text-h6">${ formDialog.editMode ? 'Upravit žáka' : 'Přidat žáka' }</div>
@@ -66,37 +78,69 @@
       </div>
     </q-card-section>
 
-    <q-card-section>
+    <q-card-section class="q-pt-none">
+
+      <!-- Základní informace -->
+      <div class="text-subtitle2 q-mb-sm q-mt-sm">Základní informace</div>
       <q-input v-model="formDialog.data.name" label="Jméno žáka" filled class="q-mb-md"></q-input>
-      <q-select
-        v-model="formDialog.data.wallet"
-        :options="g.user.wallets"
-        option-value="id"
-        option-label="name"
-        emit-value
-        map-options
-        label="Peňeženka"
-        filled
-        class="q-mb-md"
-      ></q-select>
-      <q-input v-model="formDialog.data.bakalari_url" label="URL Bakálářů" filled class="q-mb-md"></q-input>
+      <q-input v-model="formDialog.data.bakalari_url" label="URL Bakálářů (např. https://skola.bakalari.cz)" filled class="q-mb-md"></q-input>
       <q-input v-model="formDialog.data.bakalari_username" label="Přihlašovací jméno" filled class="q-mb-md"></q-input>
       <q-input v-model="formDialog.data.bakalari_password" label="Heslo" type="password" filled class="q-mb-md"></q-input>
 
-      <div class="text-subtitle2 q-mb-sm">Odměna za známku (sats)</div>
-      <div class="row q-gutter-sm">
-        <q-input v-model.number="formDialog.data.withdraw_link" label="LNURL-withdraw link (volitelné)" filled class="q-mb-md"></q-input>
-        <q-input v-model.number="formDialog.data.reward_grade_1" label="Známka 1" type="number" filled style="width:100px"></q-input>
-        <q-input v-model.number="formDialog.data.reward_grade_2" label="Známka 2" type="number" filled style="width:100px"></q-input>
-        <q-input v-model.number="formDialog.data.reward_grade_3" label="Známka 3" type="number" filled style="width:100px"></q-input>
-        <q-input v-model.number="formDialog.data.reward_grade_4" label="Známka 4" type="number" filled style="width:100px"></q-input>
-        <q-input v-model.number="formDialog.data.reward_grade_5" label="Známka 5" type="number" filled style="width:100px"></q-input>
+      <!-- Kontrolní cyklus -->
+      <div class="text-subtitle2 q-mb-sm q-mt-md">Kontrolní cyklus</div>
+      <div class="row q-gutter-sm q-mb-md">
+        <q-select
+          v-model="formDialog.data.check_period"
+          :options="[{label: 'Týdně', value: 'weekly'}, {label: 'Měsíčně', value: 'monthly'}]"
+          option-value="value"
+          option-label="label"
+          emit-value
+          map-options
+          label="Frekvence kontroly"
+          filled
+          class="col"
+        ></q-select>
+        <q-input
+          v-model="formDialog.data.last_check"
+          label="Začátek kontroly (YYYY-MM-DD)"
+          filled
+          class="col"
+          hint="Známky starší tohoto data budou ignorovány"
+        ></q-input>
       </div>
 
-      <div class="text-subtitle2 q-mt-md q-mb-sm">Výplata</div>
+      <!-- Odměny -->
+      <div class="text-subtitle2 q-mb-sm q-mt-md">Odměny za známku</div>
+      <q-btn-toggle
+        v-model="formDialog.data.reward_unit"
+        :options="[{label: 'SAT', value: 'sat'}, {label: 'Kč (přepůčet)', value: 'czk'}]"
+        unelevated
+        rounded
+        toggle-color="primary"
+        class="q-mb-md"
+      ></q-btn-toggle>
+
+      <div v-if="formDialog.data.reward_unit === 'sat'" class="row q-gutter-sm">
+        <q-input v-model.number="formDialog.data.reward_grade_1" label="Známka 1 (sat)" type="number" filled style="width:110px"></q-input>
+        <q-input v-model.number="formDialog.data.reward_grade_2" label="Známka 2 (sat)" type="number" filled style="width:110px"></q-input>
+        <q-input v-model.number="formDialog.data.reward_grade_3" label="Známka 3 (sat)" type="number" filled style="width:110px"></q-input>
+        <q-input v-model.number="formDialog.data.reward_grade_4" label="Známka 4 (sat)" type="number" filled style="width:110px"></q-input>
+        <q-input v-model.number="formDialog.data.reward_grade_5" label="Známka 5 (sat)" type="number" filled style="width:110px"></q-input>
+      </div>
+      <div v-if="formDialog.data.reward_unit === 'czk'" class="row q-gutter-sm">
+        <q-input v-model.number="formDialog.data.reward_grade_1_czk" label="Známka 1 (Kč)" type="number" filled style="width:110px"></q-input>
+        <q-input v-model.number="formDialog.data.reward_grade_2_czk" label="Známka 2 (Kč)" type="number" filled style="width:110px"></q-input>
+        <q-input v-model.number="formDialog.data.reward_grade_3_czk" label="Známka 3 (Kč)" type="number" filled style="width:110px"></q-input>
+        <q-input v-model.number="formDialog.data.reward_grade_4_czk" label="Známka 4 (Kč)" type="number" filled style="width:110px"></q-input>
+        <q-input v-model.number="formDialog.data.reward_grade_5_czk" label="Známka 5 (Kč)" type="number" filled style="width:110px"></q-input>
+      </div>
+
+      <!-- Výplata -->
+      <div class="text-subtitle2 q-mt-md q-mb-sm">Metoda výplaty</div>
       <q-select
         v-model="formDialog.data.payout_method"
-        :options="[{label: 'Email', value: 'email'}, {label: 'LNbits Withdraw', value: 'lnbits'}]"
+        :options="[{label: 'Email s QR kódem', value: 'email'}, {label: 'Přímá LN adresa (withdraw_link)', value: 'lnbits'}]"
         option-value="value"
         option-label="label"
         emit-value
@@ -105,16 +149,25 @@
         filled
         class="q-mb-md"
       ></q-select>
-      <q-input v-model="formDialog.data.email" label="Email žáka" filled class="q-mb-md"></q-input>
-      <q-input v-model="formDialog.data.lnbits_withdraw_key" label="LNbits Withdraw API klíč" filled class="q-mb-md"></q-input>
 
-      <div class="text-subtitle2 q-mt-md q-mb-sm">SMTP konfigurace (pro email výplaty)</div>
-      <q-input v-model="formDialog.data.smtp_host" label="SMTP Host" filled class="q-mb-md"></q-input>
-      <div class="row q-gutter-sm">
-        <q-input v-model="formDialog.data.smtp_user" label="SMTP Uživatel" filled class="col"></q-input>
-        <q-input v-model="formDialog.data.smtp_pass" label="SMTP Heslo" type="password" filled class="col"></q-input>
-        <q-input v-model.number="formDialog.data.smtp_port" label="Port" type="number" filled style="width:100px"></q-input>
+      <!-- Email varianta -->
+      <div v-if="formDialog.data.payout_method === 'email'">
+        <q-input v-model="formDialog.data.email" label="Email žáka" filled class="q-mb-md"></q-input>
+        <q-input v-model="formDialog.data.lnbits_withdraw_key" label="LNbits Withdraw API klíč" filled class="q-mb-md"></q-input>
+        <div class="text-subtitle2 q-mb-sm">SMTP konfigurace</div>
+        <q-input v-model="formDialog.data.smtp_host" label="SMTP Host" filled class="q-mb-sm"></q-input>
+        <div class="row q-gutter-sm">
+          <q-input v-model="formDialog.data.smtp_user" label="SMTP Uživatel" filled class="col"></q-input>
+          <q-input v-model="formDialog.data.smtp_pass" label="SMTP Heslo" type="password" filled class="col"></q-input>
+          <q-input v-model.number="formDialog.data.smtp_port" label="Port" type="number" filled style="width:90px"></q-input>
+        </div>
       </div>
+
+      <!-- Přímá LN adresa varianta -->
+      <div v-if="formDialog.data.payout_method === 'lnbits'">
+        <q-input v-model="formDialog.data.withdraw_link" label="LN adresa / LNURL žáka" filled class="q-mb-md"></q-input>
+      </div>
+
     </q-card-section>
 
     <q-card-actions align="right">
