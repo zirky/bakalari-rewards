@@ -30,6 +30,15 @@ async def create_student(data: CreateBakalariStudent) -> BakalariStudent:
         reward_grade_4_czk=data.reward_grade_4_czk,
         reward_grade_5_czk=data.reward_grade_5_czk,
         check_period=data.check_period,
+        reward_unit=data.reward_unit,
+        email=data.email,
+        payout_method=data.payout_method,
+        czk_deficit=data.czk_deficit,
+        smtp_host=data.smtp_host,
+        smtp_user=data.smtp_user,
+        smtp_pass=data.smtp_pass,
+        smtp_port=data.smtp_port,
+        lnbits_withdraw_key=data.lnbits_withdraw_key,
     )
     await db.insert("bakalari_rewards.students", student)
     return student
@@ -86,7 +95,17 @@ async def update_student(data: CreateBakalariStudent) -> Optional[BakalariStuden
             reward_grade_3_czk = :reward_grade_3_czk,
             reward_grade_4_czk = :reward_grade_4_czk,
             reward_grade_5_czk = :reward_grade_5_czk,
-            check_period = :check_period
+            check_period = :check_period,
+            last_check = :last_check,
+            reward_unit = :reward_unit,
+            email = :email,
+            payout_method = :payout_method,
+            czk_deficit = :czk_deficit,
+            smtp_host = :smtp_host,
+            smtp_user = :smtp_user,
+            smtp_pass = :smtp_pass,
+            smtp_port = :smtp_port,
+            lnbits_withdraw_key = :lnbits_withdraw_key
         WHERE id = :id
         """,
         {
@@ -109,6 +128,16 @@ async def update_student(data: CreateBakalariStudent) -> Optional[BakalariStuden
             "reward_grade_4_czk": data.reward_grade_4_czk,
             "reward_grade_5_czk": data.reward_grade_5_czk,
             "check_period": data.check_period,
+            "last_check": data.last_check,
+            "reward_unit": data.reward_unit,
+            "email": data.email,
+            "payout_method": data.payout_method,
+            "czk_deficit": data.czk_deficit,
+            "smtp_host": data.smtp_host,
+            "smtp_user": data.smtp_user,
+            "smtp_pass": data.smtp_pass,
+            "smtp_port": data.smtp_port,
+            "lnbits_withdraw_key": data.lnbits_withdraw_key,
         },
     )
     return await get_student(data.id)
@@ -122,6 +151,17 @@ async def update_student_last_check(student_id: str, last_check: str) -> None:
         WHERE id = :id
         """,
         {"id": student_id, "last_check": last_check},
+    )
+
+
+async def update_student_czk_deficit(student_id: str, czk_deficit: float) -> None:
+    await db.execute(
+        """
+        UPDATE bakalari_rewards.students
+        SET czk_deficit = :czk_deficit
+        WHERE id = :id
+        """,
+        {"id": student_id, "czk_deficit": czk_deficit},
     )
 
 
@@ -142,7 +182,8 @@ async def save_processed_mark(student_id: str, mark_hash: str) -> None:
     now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
     await db.execute(
         """
-        INSERT OR IGNORE INTO bakalari_rewards.processed_marks (student_id, mark_hash, processed_at)
+        INSERT OR IGNORE INTO bakalari_rewards.processed_marks
+        (student_id, mark_hash, processed_at)
         VALUES (:sid, :mh, :ts)
         """,
         {"sid": student_id, "mh": mark_hash, "ts": now_iso},
