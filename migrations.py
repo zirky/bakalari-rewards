@@ -2,7 +2,7 @@
 
 async def m001_initial(db):
     """
-    Vytvoří tabulku pro žáky Bakaláři Rewards.
+    Vytvoří tabulku pro žáky Bakáláři Rewards.
     """
     await db.execute(
         """
@@ -54,11 +54,8 @@ async def m002_add_czk_and_period(db):
 async def m003_convert_last_check_datetime(db):
     """
     Migrace m003 je přeskočena - DROP COLUMN není podporován ve starších verzích SQLite.
-    Pro nové instalace není potřeba (last_check je již TIMESTAMP v m001).
+    Pro nové instalace není potřeba (last_check je již TEXT v m001).
     """
-    # Tato migrace byla původně navržena pro převod TEXT na TIMESTAMP,
-    # ale způsobovala problémy s kompatibilitou SQLite.
-    # Pro existující instalace: sloupec last_check zůstává jako TEXT.
     pass
 
 
@@ -70,13 +67,12 @@ async def m004_add_processed_marks(db):
         """
         CREATE TABLE IF NOT EXISTS bakalari_rewards.processed_marks (
             student_id TEXT NOT NULL,
-            mark_hash  TEXT NOT NULL,
+            mark_hash TEXT NOT NULL,
             processed_at TEXT NOT NULL,
             PRIMARY KEY (student_id, mark_hash)
         )
         """
     )
-
 
 
 async def m005_add_withdraw_link(db):
@@ -86,4 +82,40 @@ async def m005_add_withdraw_link(db):
     """
     await db.execute(
         "ALTER TABLE bakalari_rewards.students ADD COLUMN withdraw_link TEXT DEFAULT NULL"
+    )
+
+
+async def m006_add_email_payout_deficit(db):
+    """
+    Přidá sloupce pro:
+    - email: emailová adresa žáka pro odeslání QR kódu voucheru
+    - payout_method: způsob výplaty ('email' nebo 'wallet')
+    - czk_deficit: kumulovaný deficit z předchozích období v CZK
+    - smtp_host, smtp_user, smtp_pass, smtp_port: SMTP nastavení (globální, uloženo u prvního studenta)
+    """
+    await db.execute(
+        "ALTER TABLE bakalari_rewards.students ADD COLUMN email TEXT DEFAULT NULL"
+    )
+    await db.execute(
+        "ALTER TABLE bakalari_rewards.students ADD COLUMN payout_method TEXT DEFAULT 'email'"
+    )
+    await db.execute(
+        "ALTER TABLE bakalari_rewards.students ADD COLUMN czk_deficit REAL DEFAULT 0"
+    )
+    # SMTP konfigurace ulozena per-student (admin muze mit ruzne SMTP pro ruzne zaky)
+    await db.execute(
+        "ALTER TABLE bakalari_rewards.students ADD COLUMN smtp_host TEXT DEFAULT NULL"
+    )
+    await db.execute(
+        "ALTER TABLE bakalari_rewards.students ADD COLUMN smtp_user TEXT DEFAULT NULL"
+    )
+    await db.execute(
+        "ALTER TABLE bakalari_rewards.students ADD COLUMN smtp_pass TEXT DEFAULT NULL"
+    )
+    await db.execute(
+        "ALTER TABLE bakalari_rewards.students ADD COLUMN smtp_port INTEGER DEFAULT 465"
+    )
+    # lnbits_withdraw_adminkey: API klic pro withdraw extension
+    await db.execute(
+        "ALTER TABLE bakalari_rewards.students ADD COLUMN lnbits_withdraw_key TEXT DEFAULT NULL"
     )
