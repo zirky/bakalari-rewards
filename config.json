@@ -3,7 +3,7 @@
   "short_description": "Automatické odměny v BTC za školní známky",
   "tile": "/bakalari_rewards/static/image/myextension.png",
   "min_lnbits_version": "0.12.0",
-  "version": "0.8.1",    {
+  "version": "00.8.21",    {
       "name": "zirky",
       "uri": "https://github.com/zirky",
       "role": "Lead dev"
