@@ -13,6 +13,7 @@ async def create_student(data: CreateBakalariStudent) -> BakalariStudent:
         id=student_id,
         name=data.name,
         wallet=data.wallet,
+        withdraw_link=data.withdraw_link,
         bakalari_url=data.bakalari_url,
         bakalari_username=data.bakalari_username,
         bakalari_password=data.bakalari_password,
@@ -70,6 +71,7 @@ async def update_student(data: CreateBakalariStudent) -> Optional[BakalariStuden
         UPDATE bakalari_rewards.students SET
             name = :name,
             wallet = :wallet,
+            withdraw_link = :withdraw_link,
             bakalari_url = :bakalari_url,
             bakalari_username = :bakalari_username,
             bakalari_password = :bakalari_password,
@@ -91,6 +93,7 @@ async def update_student(data: CreateBakalariStudent) -> Optional[BakalariStuden
             "id": data.id,
             "name": data.name,
             "wallet": data.wallet,
+            "withdraw_link": data.withdraw_link,
             "bakalari_url": data.bakalari_url,
             "bakalari_username": data.bakalari_username,
             "bakalari_password": data.bakalari_password,
@@ -114,7 +117,9 @@ async def update_student(data: CreateBakalariStudent) -> Optional[BakalariStuden
 async def update_student_last_check(student_id: str, last_check: str) -> None:
     await db.execute(
         """
-        UPDATE bakalari_rewards.students SET last_check = :last_check WHERE id = :id
+        UPDATE bakalari_rewards.students
+        SET last_check = :last_check
+        WHERE id = :id
         """,
         {"id": student_id, "last_check": last_check},
     )
@@ -137,8 +142,7 @@ async def save_processed_mark(student_id: str, mark_hash: str) -> None:
     now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
     await db.execute(
         """
-        INSERT OR IGNORE INTO bakalari_rewards.processed_marks
-            (student_id, mark_hash, processed_at)
+        INSERT OR IGNORE INTO bakalari_rewards.processed_marks (student_id, mark_hash, processed_at)
         VALUES (:sid, :mh, :ts)
         """,
         {"sid": student_id, "mh": mark_hash, "ts": now_iso},
