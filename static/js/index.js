@@ -1,7 +1,9 @@
 // static/js/index.js - LNbits 1.5.3 format
 
-window.app = {
-  mixins: [window.windowMixin],
+window.app = Vue.createApp({
+  el: '#vue',
+  mixins: [windowMixin],
+  delimiters: ['${', '}'],
   data: function () {
     return {
       students: [],
@@ -161,5 +163,4 @@ window.app = {
       this.getStudents()
     }
   }
-}
-
+})
