@@ -118,3 +118,28 @@ async def update_student_last_check(student_id: str, last_check: str) -> None:
         """,
         {"id": student_id, "last_check": last_check},
     )
+
+
+# ---- Processed marks (deduplication) ----
+
+async def get_processed_mark(student_id: str, mark_hash: str) -> bool:
+    """Vrati True pokud jiz byla tato znamka zpracovana."""
+    row = await db.fetchone(
+        "SELECT 1 FROM bakalari_rewards.processed_marks WHERE student_id = :sid AND mark_hash = :mh",
+        {"sid": student_id, "mh": mark_hash},
+    )
+    return row is not None
+
+
+async def save_processed_mark(student_id: str, mark_hash: str) -> None:
+    """Ulozi zaznam o zpracovane znamce."""
+    from datetime import datetime, timezone
+    now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
+    await db.execute(
+        """
+        INSERT OR IGNORE INTO bakalari_rewards.processed_marks
+            (student_id, mark_hash, processed_at)
+        VALUES (:sid, :mh, :ts)
+        """,
+        {"sid": student_id, "mh": mark_hash, "ts": now_iso},
+    )
