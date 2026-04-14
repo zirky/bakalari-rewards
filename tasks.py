@@ -37,12 +37,13 @@ def mark_hash(student_id: str, mark: dict) -> str:
 async def fetch_bakalari_grades(bakalari_url: str, username: str, password: str):
     """Prihlasi se do Bakalaru a vrati seznam znamek."""
     base = bakalari_url.rstrip("/")
-    prefixes = ["/bakalari", "/bakaweb", "/webrodice", "/dm", "/mobile", ""]
-    last_exc = None
+    prefixes = ["/webrodice", "/bakalari", "/bakaweb", "/dm", "/mobile", ""]
+    last_error = "zadny prefix nevratil uspech"
     async with httpx.AsyncClient(timeout=30, verify=False) as client:
         for prefix in prefixes:
             try:
                 token_url = base + prefix + "/api/login"
+                logger.debug(f"Zkousim login: {token_url}")
                 resp = await client.post(
                     token_url,
                     data={
@@ -53,10 +54,15 @@ async def fetch_bakalari_grades(bakalari_url: str, username: str, password: str)
                     },
                 )
                 if resp.status_code != 200:
+                    last_error = f"{token_url} => HTTP {resp.status_code}: {resp.text[:200]}"
+                    logger.debug(f"Login selhal: {last_error}")
                     continue
                 token = resp.json().get("access_token")
                 if not token:
+                    last_error = f"{token_url} => HTTP 200 ale chybi access_token. Odpoved: {resp.text[:200]}"
+                    logger.debug(f"Login selhal: {last_error}")
                     continue
+                logger.info(f"Login uspesny pres: {token_url}")
                 grades_url = base + prefix + "/api/3/marks"
                 grades_resp = await client.get(
                     grades_url,
@@ -65,9 +71,10 @@ async def fetch_bakalari_grades(bakalari_url: str, username: str, password: str)
                 grades_resp.raise_for_status()
                 return grades_resp.json()
             except Exception as e:
-                last_exc = e
+                last_error = f"{base + prefix}/api/login => vyjimka: {e}"
+                logger.debug(f"Login vyjimka: {last_error}")
                 continue
-    raise ValueError(f"Nepodarilo se pripojit k Bakalari: {last_exc}")
+    raise ValueError(f"Nepodarilo se pripojit k Bakalari. Posledni chyba: {last_error}")
 
 
 async def get_btc_czk_rate() -> float:
@@ -112,14 +119,12 @@ async def process_student_grades(student):
         if not should_check_student(student):
             logger.debug(f"Student {student.name}: prilis brzy na dalsi kontrolu, preskakuji")
             return
-
         grades_data = await fetch_bakalari_grades(
             student.bakalari_url,
             student.bakalari_username,
             student.bakalari_password,
         )
         marks = grades_data.get("Marks", [])
-
         # Parsujeme last_check jako datetime pro porovnani
         last_check_dt = None
         if student.last_check:
@@ -128,7 +133,6 @@ async def process_student_grades(student):
                 last_check_dt = datetime.strptime(lc_str, "%Y-%m-%dT%H:%M:%S")
             except Exception:
                 pass
-
         new_marks = []
         for mark in marks:
             mark_date_str = mark.get("MarkDate") or mark.get("EditDate", "")
@@ -143,30 +147,25 @@ async def process_student_grades(student):
             if await get_processed_mark(student.id, mhash):
                 continue
             new_marks.append((mark, mhash))
-
         if not new_marks:
             logger.info(f"Student {student.name}: zadne nove znamky")
             now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
             await update_student_last_check(student.id, now_iso)
             return
-
         # Ziskame kurz pokud je treba
         reward_unit = getattr(student, "reward_unit", "sat")
         czk_per_btc = None
         if reward_unit == "czk":
             czk_per_btc = await get_btc_czk_rate()
-
         rewards_sent = 0
         for mark, mhash in new_marks:
             grade_str = str(mark.get("MarkText", "")).strip()
             grade = None
             if grade_str and grade_str[0].isdigit():
                 grade = int(grade_str[0])
-
             if grade is None or grade not in GRADE_REWARD_MAP:
                 await save_processed_mark(student.id, mhash)
                 continue
-
             # Vypocet odmeny v sats
             if reward_unit == "czk":
                 czk_field = GRADE_REWARD_CZK_MAP[grade]
@@ -186,10 +185,8 @@ async def process_student_grades(student):
             else:
                 sat_field = GRADE_REWARD_MAP[grade]
                 reward_sats = getattr(student, sat_field, 0) or 0
-
             subject = mark.get("Subject", "nezname")
             memo = f"Bakalari odmena: {student.name} - {subject} - znamka {grade}"
-
             if reward_sats > 0:
                 payout_method = getattr(student, "payout_method", "email")
                 success = False
@@ -202,7 +199,6 @@ async def process_student_grades(student):
                 if success:
                     rewards_sent += 1
             await save_processed_mark(student.id, mhash)
-
         now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
         await update_student_last_check(student.id, now_iso)
         logger.info(f"Student {student.name}: zpracovano {len(new_marks)} znamek, odeslan {rewards_sent} odmeny")
