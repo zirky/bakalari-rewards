@@ -241,7 +241,7 @@ async def bakalari_rewards_task():
             logger.info(f"Kontroluji znamky pro {len(students)} studentu")
             for student in students:
                 await process_student_grades(student)
-            await asyncio.sleep(3600)
+            await asyncio.sleep(60)
         except asyncio.CancelledError:
             logger.info("Bakalari Rewards task cancelled.")
             break
