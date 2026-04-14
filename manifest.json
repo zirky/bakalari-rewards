@@ -8,7 +8,7 @@
       "version": "0.8.16",
       "short_description": "Automatické odměny v BTC za školní známky",
       "icon": "https://raw.githubusercontent.com/zirky/bakalari-rewards/main/static/image/myextension.png",
-                        "archive": "https://github.com/zirky/bakalari-rewards/archive/refs/tags/v0.816.zip",
+                        "archive": "https://github.com/zirky/bakalari-rewards/archive/refs/tags/v0.8.16.zip",
       "hash": ""
     }
   ]
