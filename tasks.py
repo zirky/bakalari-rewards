@@ -42,7 +42,7 @@ async def fetch_bakalari_grades(bakalari_url: str, username: str, password: str)
     async with httpx.AsyncClient(timeout=30, verify=False) as client:
         for prefix in prefixes:
             try:
-                token_url = base + prefix + "/api/3/login"
+                token_url = base + prefix + "/api/login"
                 resp = await client.post(
                     token_url,
                     data={
