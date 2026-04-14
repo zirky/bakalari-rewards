@@ -205,4 +205,4 @@ window.app = Vue.createApp({
     }
   }
 })
- window.app.mount('#vue')
+window.app.mount('#vue')
