@@ -1,8 +1,17 @@
-# Migrations file - nikdy nemaž, pouze přidávej!
+# Migrations file - nikdy nemazej, pouze pridavej!
+
+
+async def _safe_alter(db, sql):
+    """Provede ALTER TABLE - ignoruje chybu pokud sloupec jiz existuje."""
+    try:
+        await db.execute(sql)
+    except Exception:
+        pass  # sloupec jiz existuje
+
 
 async def m001_initial(db):
     """
-    Vytvoří tabulku pro žáky Bakáláři Rewards.
+    Vytvoří tabulku pro žáky Bakálář Rewards.
     """
     await db.execute(
         """
@@ -26,35 +35,21 @@ async def m001_initial(db):
 
 async def m002_add_czk_and_period(db):
     """
-    Přidá sloupce pro CZK měnu, frekvenci kontroly a poslední kontrolu.
+    Pridá sloupce pro CZK menu, frekvenci kontroly a poslední kontrolu.
     """
-    await db.execute(
-        "ALTER TABLE bakalari_rewards.students ADD COLUMN use_czk INTEGER DEFAULT 0"
-    )
-    await db.execute(
-        "ALTER TABLE bakalari_rewards.students ADD COLUMN reward_grade_1_czk REAL DEFAULT 0"
-    )
-    await db.execute(
-        "ALTER TABLE bakalari_rewards.students ADD COLUMN reward_grade_2_czk REAL DEFAULT 0"
-    )
-    await db.execute(
-        "ALTER TABLE bakalari_rewards.students ADD COLUMN reward_grade_3_czk REAL DEFAULT 0"
-    )
-    await db.execute(
-        "ALTER TABLE bakalari_rewards.students ADD COLUMN reward_grade_4_czk REAL DEFAULT 0"
-    )
-    await db.execute(
-        "ALTER TABLE bakalari_rewards.students ADD COLUMN reward_grade_5_czk REAL DEFAULT 0"
-    )
-    await db.execute(
-        "ALTER TABLE bakalari_rewards.students ADD COLUMN check_period TEXT DEFAULT 'weekly'"
-    )
+    await _safe_alter(db, "ALTER TABLE bakalari_rewards.students ADD COLUMN use_czk INTEGER DEFAULT 0")
+    await _safe_alter(db, "ALTER TABLE bakalari_rewards.students ADD COLUMN reward_grade_1_czk REAL DEFAULT 0")
+    await _safe_alter(db, "ALTER TABLE bakalari_rewards.students ADD COLUMN reward_grade_2_czk REAL DEFAULT 0")
+    await _safe_alter(db, "ALTER TABLE bakalari_rewards.students ADD COLUMN reward_grade_3_czk REAL DEFAULT 0")
+    await _safe_alter(db, "ALTER TABLE bakalari_rewards.students ADD COLUMN reward_grade_4_czk REAL DEFAULT 0")
+    await _safe_alter(db, "ALTER TABLE bakalari_rewards.students ADD COLUMN reward_grade_5_czk REAL DEFAULT 0")
+    await _safe_alter(db, "ALTER TABLE bakalari_rewards.students ADD COLUMN check_period TEXT DEFAULT 'weekly'")
 
 
 async def m003_convert_last_check_datetime(db):
     """
-    Migrace m003 je přeskočena - DROP COLUMN není podporován ve starších verzích SQLite.
-    Pro nové instalace není potřeba (last_check je již TEXT v m001).
+    Migrace m003 je preskocena - DROP COLUMN neni podporovan ve starsich verzich SQLite.
+    Pro nove instalace neni potreba (last_check je jiz TEXT v m001).
     """
     pass
 
@@ -78,53 +73,26 @@ async def m004_add_processed_marks(db):
 async def m005_add_withdraw_link(db):
     """
     Prida sloupec withdraw_link pro LNURL-withdraw odkaz studenta.
-    Wallet pole zustava ale stava se volitelnym.
     """
-    await db.execute(
-        "ALTER TABLE bakalari_rewards.students ADD COLUMN withdraw_link TEXT DEFAULT NULL"
-    )
+    await _safe_alter(db, "ALTER TABLE bakalari_rewards.students ADD COLUMN withdraw_link TEXT DEFAULT NULL")
 
 
 async def m006_add_email_payout_deficit(db):
     """
-    Přidá sloupce pro:
-    - email: emailová adresa žáka pro odeslání QR kódu voucheru
-    - payout_method: způsob výplaty ('email' nebo 'wallet')
-    - czk_deficit: kumulovaný deficit z předchozích období v CZK
-    - smtp_host, smtp_user, smtp_pass, smtp_port: SMTP nastavení (globální, uloženo u prvního studenta)
+    Pridá sloupce pro email, payout_method, czk_deficit a SMTP konfiguraci.
     """
-    await db.execute(
-        "ALTER TABLE bakalari_rewards.students ADD COLUMN email TEXT DEFAULT NULL"
-    )
-    await db.execute(
-        "ALTER TABLE bakalari_rewards.students ADD COLUMN payout_method TEXT DEFAULT 'email'"
-    )
-    await db.execute(
-        "ALTER TABLE bakalari_rewards.students ADD COLUMN czk_deficit REAL DEFAULT 0"
-    )
-    # SMTP konfigurace ulozena per-student (admin muze mit ruzne SMTP pro ruzne zaky)
-    await db.execute(
-        "ALTER TABLE bakalari_rewards.students ADD COLUMN smtp_host TEXT DEFAULT NULL"
-    )
-    await db.execute(
-        "ALTER TABLE bakalari_rewards.students ADD COLUMN smtp_user TEXT DEFAULT NULL"
-    )
-    await db.execute(
-        "ALTER TABLE bakalari_rewards.students ADD COLUMN smtp_pass TEXT DEFAULT NULL"
-    )
-    await db.execute(
-        "ALTER TABLE bakalari_rewards.students ADD COLUMN smtp_port INTEGER DEFAULT 465"
-    )
+    await _safe_alter(db, "ALTER TABLE bakalari_rewards.students ADD COLUMN email TEXT DEFAULT NULL")
+    await _safe_alter(db, "ALTER TABLE bakalari_rewards.students ADD COLUMN payout_method TEXT DEFAULT 'email'")
+    await _safe_alter(db, "ALTER TABLE bakalari_rewards.students ADD COLUMN czk_deficit REAL DEFAULT 0")
+    await _safe_alter(db, "ALTER TABLE bakalari_rewards.students ADD COLUMN smtp_host TEXT DEFAULT NULL")
+    await _safe_alter(db, "ALTER TABLE bakalari_rewards.students ADD COLUMN smtp_user TEXT DEFAULT NULL")
+    await _safe_alter(db, "ALTER TABLE bakalari_rewards.students ADD COLUMN smtp_pass TEXT DEFAULT NULL")
+    await _safe_alter(db, "ALTER TABLE bakalari_rewards.students ADD COLUMN smtp_port INTEGER DEFAULT 465")
 
 
 async def m007_add_reward_unit(db):
     """
-    Přidá sloupec reward_unit pro volbu měny odměny (sat nebo czk).
+    Pridá sloupec reward_unit pro volbu meny odmeny (sat nebo czk).
     """
-    await db.execute(
-        "ALTER TABLE bakalari_rewards.students ADD COLUMN reward_unit TEXT DEFAULT 'sat'"
-    )
-    # lnbits_withdraw_adminkey: API klic pro withdraw extension
-    await db.execute(
-        "ALTER TABLE bakalari_rewards.students ADD COLUMN lnbits_withdraw_key TEXT DEFAULT NULL"
-    )
+    await _safe_alter(db, "ALTER TABLE bakalari_rewards.students ADD COLUMN reward_unit TEXT DEFAULT 'sat'")
+    await _safe_alter(db, "ALTER TABLE bakalari_rewards.students ADD COLUMN lnbits_withdraw_key TEXT DEFAULT NULL")
