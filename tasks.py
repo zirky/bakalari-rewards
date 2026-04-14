@@ -182,20 +182,30 @@ async def process_student_grades(student):
             now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
             await update_student_last_check(student.id, now_iso)
             return
+        
+        # === NOVÁ LOGIKA: AGREGACE ODMĚN ===
         reward_unit = getattr(student, "reward_unit", "sat")
         czk_per_btc = None
         if reward_unit == "czk":
             czk_per_btc = await get_btc_czk_rate()
-        rewards_sent = 0
+        
+        # Projdeme všechny známky a spočítáme celkovou odměnu
+        total_reward_sats = 0
+        grade_counts = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0}  # Pro statistiku
+        processed_marks = []  # Seznam známek k označení jako zpracované
+        
         for mark, mhash in new_marks:
             grade_str = str(mark.get("MarkText", "")).strip()
             grade = None
             if grade_str and grade_str[0].isdigit():
                 grade = int(grade_str[0])
+            
             if grade is None or grade not in GRADE_REWARD_MAP:
                 logger.debug(f"Student {student.name}: znamka '{grade_str}' neni ocenitelna, preskakuji")
-                await save_processed_mark(student.id, mhash)
+                processed_marks.append(mhash)
                 continue
+            
+            # Výpočet odměny pro tuto známku
             if reward_unit == "czk":
                 czk_field = GRADE_REWARD_CZK_MAP[grade]
                 czk_amount = getattr(student, czk_field, 0) or 0
@@ -204,7 +214,7 @@ async def process_student_grades(student):
                 if balance <= 0:
                     from .crud import update_student_czk_deficit
                     await update_student_czk_deficit(student.id, abs(balance))
-                    await save_processed_mark(student.id, mhash)
+                    processed_marks.append(mhash)
                     continue
                 reward_sats = czk_to_sats(balance, czk_per_btc)
                 from .crud import update_student_czk_deficit
@@ -212,23 +222,44 @@ async def process_student_grades(student):
             else:
                 sat_field = GRADE_REWARD_MAP[grade]
                 reward_sats = getattr(student, sat_field, 0) or 0
-            subject = mark.get("Subject", "nezname")
-            memo = f"Bakalari odmena: {student.name} - {subject} - znamka {grade}"
-            if reward_sats > 0:
-                payout_method = getattr(student, "payout_method", "email")
-                success = False
-                if payout_method == "lnbits" and student.withdraw_link:
-                    success = await send_reward_via_withdraw_link(student.withdraw_link, reward_sats, memo)
-                elif payout_method == "email" and student.email and student.lnbits_withdraw_key:
-                    success = await send_reward_via_email(student, reward_sats, memo)
-                else:
-                    logger.warning(f"Student {student.name}: neni nastavena metoda vyplaty, preskakuji odmenu")
-                if success:
-                    rewards_sent += 1
+            
+            # Přičteme k celkové odměně
+            total_reward_sats += reward_sats
+            grade_counts[grade] += 1
+            processed_marks.append(mhash)
+        
+        # Sestavíme souhrn známek pro memo
+        grade_summary = ", ".join([f"{count}x{grade}" for grade, count in grade_counts.items() if count > 0])
+        period = getattr(student, "check_period", "weekly")
+        period_text = "mesic" if period == "monthly" else "tyden"
+        memo = f"Odmena za {period_text}: {grade_summary} (celkem {len(processed_marks)} znamek)"
+        
+        logger.info(f"Student {student.name}: celkova odmena za obdobi: {total_reward_sats} sat ({grade_summary})")
+        
+        # Pošleme JEDNU platbu s celkovou částkou
+        payment_sent = False
+        if total_reward_sats > 0:
+            payout_method = getattr(student, "payout_method", "email")
+            if payout_method == "lnbits" and student.withdraw_link:
+                payment_sent = await send_reward_via_withdraw_link(student.withdraw_link, total_reward_sats, memo)
+            elif payout_method == "email" and student.email and student.lnbits_withdraw_key:
+                payment_sent = await send_reward_via_email(student, total_reward_sats, memo)
+            else:
+                logger.warning(f"Student {student.name}: neni nastavena metoda vyplaty, preskakuji odmenu")
+        
+        # Označíme všechny známky jako zpracované
+        for mhash in processed_marks:
             await save_processed_mark(student.id, mhash)
+        
+        # Aktualizujeme last_check
         now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
         await update_student_last_check(student.id, now_iso)
-        logger.info(f"Student {student.name}: zpracovano {len(new_marks)} znamek, odeslan {rewards_sent} odmeny")
+        
+        if payment_sent:
+            logger.info(f"Student {student.name}: zpracovano {len(processed_marks)} znamek, odeslana 1 platba ({total_reward_sats} sat)")
+        else:
+            logger.info(f"Student {student.name}: zpracovano {len(processed_marks)} znamek, platba nebyla odeslana")
+    
     except Exception as exc:
         logger.warning(f"Chyba pri zpracovani studenta {student.name}: {exc}")
 
@@ -236,7 +267,7 @@ async def process_student_grades(student):
 async def send_reward_via_withdraw_link(withdraw_link: str, amount_sats: int, memo: str) -> bool:
     """Posle odmenu primo na LN adresu/LNURL studenta."""
     try:
-        logger.info(f"send_reward_via_withdraw_link: {withdraw_link}, {amount_sats} sat - TODO")
+        logger.info(f"send_reward_via_withdraw_link: {withdraw_link}, {amount_sats} sat - {memo}")
         return False
     except Exception as e:
         logger.warning(f"Chyba pri posilani odmeny pres withdraw_link: {e}")
@@ -246,7 +277,7 @@ async def send_reward_via_withdraw_link(withdraw_link: str, amount_sats: int, me
 async def send_reward_via_email(student, amount_sats: int, memo: str) -> bool:
     """Vytvori LNURL-withdraw voucher a odesle email s QR kodem."""
     try:
-        logger.info(f"send_reward_via_email: {student.email}, {amount_sats} sat - TODO")
+        logger.info(f"send_reward_via_email: {student.email}, {amount_sats} sat - {memo}")
         return False
     except Exception as e:
         logger.warning(f"Chyba pri posilani odmeny emailem: {e}")
@@ -264,8 +295,3 @@ async def bakalari_rewards_task():
                 await process_student_grades(student)
             await asyncio.sleep(60)
         except asyncio.CancelledError:
-            logger.info("Bakalari Rewards task cancelled.")
-            break
-        except Exception as exc:
-            logger.warning(f"Bakalari Rewards task error: {exc}")
-            await asyncio.sleep(60)
