@@ -80,8 +80,8 @@ async def fetch_bakalari_grades(bakalari_url: str, username: str, password: str)
                 )
                 grades_resp.raise_for_status()
                 data = grades_resp.json()
-                logger.info(f"API /api/3/marks odpoved - klice: {list(data.keys())}, pocet Subjects: {len(data.get('Subjects', []))}")                return data
-            except ValueError:
+                logger.info(f"API /api/3/marks odpoved - klice: {list(data.keys())}, pocet Subjects: {len(data.get('Subjects', []))}")
+                return data            except ValueError:
                 raise
             except Exception as e:
                 last_error = f"{base + prefix}/api/login => vyjimka: {e}"
