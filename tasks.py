@@ -81,7 +81,7 @@ async def fetch_bakalari_grades(bakalari_url: str, username: str, password: str)
                 grades_resp.raise_for_status()
                 data = grades_resp.json()
                 logger.info(f"API /api/3/marks odpoved - klice: {list(data.keys())}, pocet Subjects: {len(data.get('Subjects', []))}")
-                return data   
+                return data
             except ValueError:
                 raise
             except Exception as e:
@@ -146,7 +146,11 @@ async def process_student_grades(student):
             for mark in subject_marks:
                 # Add subject name to mark for later use
                 mark["Subject"] = subject_name
-logger.info(f"Student {student.name}: API vratilo {len(marks)} znamek celkem")        last_check_dt = None
+                marks.append(mark)
+        
+        logger.info(f"Student {student.name}: API vratilo {len(marks)} znamek celkem")
+        
+        last_check_dt = None
         if student.last_check:
             try:
                 lc_str = student.last_check[:19]
