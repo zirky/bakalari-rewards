@@ -295,3 +295,4 @@ async def bakalari_rewards_task():
                 await process_student_grades(student)
             await asyncio.sleep(60)
         except asyncio.CancelledError:
+            logger.info("
