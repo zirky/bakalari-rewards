@@ -191,8 +191,8 @@ async def process_student_grades(student):
         
         # Projdeme všechny známky a spočítáme celkovou odměnu
         total_reward_sats = 0
-        grade_counts = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0}  # Pro statistiku
-        processed_marks = []  # Seznam známek k označení jako zpracované
+        grade_counts = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0}
+        processed_marks = []
         
         for mark, mhash in new_marks:
             grade_str = str(mark.get("MarkText", "")).strip()
@@ -205,7 +205,6 @@ async def process_student_grades(student):
                 processed_marks.append(mhash)
                 continue
             
-            # Výpočet odměny pro tuto známku
             if reward_unit == "czk":
                 czk_field = GRADE_REWARD_CZK_MAP[grade]
                 czk_amount = getattr(student, czk_field, 0) or 0
@@ -223,12 +222,10 @@ async def process_student_grades(student):
                 sat_field = GRADE_REWARD_MAP[grade]
                 reward_sats = getattr(student, sat_field, 0) or 0
             
-            # Přičteme k celkové odměně
             total_reward_sats += reward_sats
             grade_counts[grade] += 1
             processed_marks.append(mhash)
         
-        # Sestavíme souhrn známek pro memo
         grade_summary = ", ".join([f"{count}x{grade}" for grade, count in grade_counts.items() if count > 0])
         period = getattr(student, "check_period", "weekly")
         period_text = "mesic" if period == "monthly" else "tyden"
@@ -236,7 +233,6 @@ async def process_student_grades(student):
         
         logger.info(f"Student {student.name}: celkova odmena za obdobi: {total_reward_sats} sat ({grade_summary})")
         
-        # Pošleme JEDNU platbu s celkovou částkou
         payment_sent = False
         if total_reward_sats > 0:
             payout_method = getattr(student, "payout_method", "email")
@@ -247,11 +243,9 @@ async def process_student_grades(student):
             else:
                 logger.warning(f"Student {student.name}: neni nastavena metoda vyplaty, preskakuji odmenu")
         
-        # Označíme všechny známky jako zpracované
         for mhash in processed_marks:
             await save_processed_mark(student.id, mhash)
         
-        # Aktualizujeme last_check
         now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
         await update_student_last_check(student.id, now_iso)
         
@@ -295,4 +289,8 @@ async def bakalari_rewards_task():
                 await process_student_grades(student)
             await asyncio.sleep(60)
         except asyncio.CancelledError:
-            logger.info("
+            logger.info("Bakalari Rewards task cancelled.")
+            break
+        except Exception as exc:
+            logger.warning(f"Bakalari Rewards task error: {exc}")
+            await asyncio.sleep(60)
