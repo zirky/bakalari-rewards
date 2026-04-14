@@ -200,9 +200,8 @@ window.app = Vue.createApp({
     }
   },
   created: function () {
-    if (this.g.user.wallets.length) {
+    if (this.g && this.g.user && this.g.user.wallets.length) {
       this.getStudents()
     }
   }
 })
-window.app.mount('#vue')
