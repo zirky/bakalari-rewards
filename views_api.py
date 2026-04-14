@@ -40,6 +40,7 @@ async def api_update_student(
     if not student or student.wallet != wallet.wallet.id:
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Student not found")
     data.id = student_id
+    data.wallet = wallet.wallet.id
     return await update_student(data)
 
 
