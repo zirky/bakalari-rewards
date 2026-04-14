@@ -80,8 +80,7 @@ async def fetch_bakalari_grades(bakalari_url: str, username: str, password: str)
                 )
                 grades_resp.raise_for_status()
                 data = grades_resp.json()
-                logger.info(f"API /api/3/marks odpoved - klice: {list(data.keys())}, pocet Marks: {len(data.get('Marks', []))}")
-                return data
+                logger.info(f"API /api/3/marks odpoved - klice: {list(data.keys())}, pocet Subjects: {len(data.get('Subjects', []))}")                return data
             except ValueError:
                 raise
             except Exception as e:
@@ -137,9 +136,16 @@ async def process_student_grades(student):
             student.bakalari_username,
             student.bakalari_password,
         )
-        marks = grades_data.get("Marks", [])
-        logger.info(f"Student {student.name}: API vratilo {len(marks)} znamek celkem")
-        last_check_dt = None
+        # Parse grades from Subjects structure (Bakalari API returns Subjects -> Marks)
+        subjects = grades_data.get("Subjects", grades_data.get("Marks", []))
+        marks = []
+        for subject in subjects:
+            subject_name = subject.get("Caption") or subject.get("Name") or subject.get("SubjectName") or "Neznamy predmet"
+            subject_marks = subject.get("Marks", [])
+            for mark in subject_marks:
+                # Add subject name to mark for later use
+                mark["Subject"] = subject_name
+logger.info(f"Student {student.name}: API vratilo {len(marks)} znamek celkem")        last_check_dt = None
         if student.last_check:
             try:
                 lc_str = student.last_check[:19]
