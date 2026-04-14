@@ -1,6 +1,6 @@
 // static/js/index.js - LNbits 1.5.3 format
 
-window.app = {
+window.app = Vue.createApp({
   mixins: [windowMixin],
   delimiters: ['${', '}'],
   data: function () {
@@ -202,6 +202,7 @@ window.app = {
   created: function () {
     if (this.g.user.wallets.length) {
       this.getStudents()
+      window.app.mount('#vue')
     }
   }
-}
+})
