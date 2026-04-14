@@ -22,15 +22,15 @@ class CreateBakalariStudent(BaseModel):
     reward_grade_3_czk: float = 0
     reward_grade_4_czk: float = 0
     reward_grade_5_czk: float = 0
-    check_period: str = 'weekly'
-    reward_unit: str = 'sat'
+    check_period: Optional[str] = 'weekly'
+    reward_unit: Optional[str] = 'sat'
     email: Optional[str] = None
-    payout_method: str = 'email'
+    payout_method: Optional[str] = 'email'
     czk_deficit: float = 0
     smtp_host: Optional[str] = None
     smtp_user: Optional[str] = None
     smtp_pass: Optional[str] = None
-    smtp_port: int = 465
+    smtp_port: Optional[int] = 465
     lnbits_withdraw_key: Optional[str] = None
 
 
@@ -54,13 +54,13 @@ class BakalariStudent(BaseModel):
     reward_grade_3_czk: float = 0
     reward_grade_4_czk: float = 0
     reward_grade_5_czk: float = 0
-    check_period: str = 'weekly'
-    reward_unit: str = 'sat'
+    check_period: Optional[str] = 'weekly'
+    reward_unit: Optional[str] = 'sat'
     email: Optional[str] = None
-    payout_method: str = 'email'
+    payout_method: Optional[str] = 'email'
     czk_deficit: float = 0
     smtp_host: Optional[str] = None
     smtp_user: Optional[str] = None
     smtp_pass: Optional[str] = None
-    smtp_port: int = 465
+    smtp_port: Optional[int] = 465
     lnbits_withdraw_key: Optional[str] = None
