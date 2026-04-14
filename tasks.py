@@ -53,10 +53,24 @@ async def fetch_bakalari_grades(bakalari_url: str, username: str, password: str)
                         "password": password,
                     },
                 )
-                if resp.status_code != 200:
-                    last_error = f"{token_url} => HTTP {resp.status_code}: {resp.text[:200]}"
-                    logger.debug(f"Login selhal: {last_error}")
+                logger.debug(f"Login odpoved {token_url}: HTTP {resp.status_code}")
+                # 404 = endpoint neexistuje, zkus dalsi prefix
+                if resp.status_code == 404:
+                    last_error = f"{token_url} => HTTP 404 (endpoint nenalezen)"
                     continue
+                # Jakykoli jiny non-200 status = endpoint existuje, ale neco je spatne
+                # (napr. 400 invalid_client, 401 spatne heslo) - zastav hledani
+                if resp.status_code != 200:
+                    body = resp.text[:500]
+                    # Zkus parsovat JSON chybu
+                    try:
+                        err_json = resp.json()
+                        err_desc = err_json.get("error_description") or err_json.get("error") or body
+                    except Exception:
+                        err_desc = body
+                    raise ValueError(
+                        f"Prihlaseni selhalo na {token_url}: HTTP {resp.status_code} - {err_desc}"
+                    )
                 token = resp.json().get("access_token")
                 if not token:
                     last_error = f"{token_url} => HTTP 200 ale chybi access_token. Odpoved: {resp.text[:200]}"
@@ -70,11 +84,13 @@ async def fetch_bakalari_grades(bakalari_url: str, username: str, password: str)
                 )
                 grades_resp.raise_for_status()
                 return grades_resp.json()
+            except ValueError:
+                raise
             except Exception as e:
                 last_error = f"{base + prefix}/api/login => vyjimka: {e}"
                 logger.debug(f"Login vyjimka: {last_error}")
                 continue
-    raise ValueError(f"Nepodarilo se pripojit k Bakalari. Posledni chyba: {last_error}")
+    raise ValueError(f"Nepodarilo se pripojit k Bakalari. Zadny ze znamych prefixu nefungoval. Posledni chyba: {last_error}")
 
 
 async def get_btc_czk_rate() -> float:
@@ -102,7 +118,6 @@ def should_check_student(student) -> bool:
     if student.last_check is None:
         return True
     now = datetime.now(timezone.utc)
-    # last_check je Optional[str] - parsujeme z ISO stringu
     try:
         lc_str = student.last_check[:19]  # "2025-03-01T12:00:00"
         lc = datetime.strptime(lc_str, "%Y-%m-%dT%H:%M:%S").replace(tzinfo=timezone.utc)
@@ -125,7 +140,6 @@ async def process_student_grades(student):
             student.bakalari_password,
         )
         marks = grades_data.get("Marks", [])
-        # Parsujeme last_check jako datetime pro porovnani
         last_check_dt = None
         if student.last_check:
             try:
@@ -152,7 +166,6 @@ async def process_student_grades(student):
             now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
             await update_student_last_check(student.id, now_iso)
             return
-        # Ziskame kurz pokud je treba
         reward_unit = getattr(student, "reward_unit", "sat")
         czk_per_btc = None
         if reward_unit == "czk":
@@ -166,15 +179,12 @@ async def process_student_grades(student):
             if grade is None or grade not in GRADE_REWARD_MAP:
                 await save_processed_mark(student.id, mhash)
                 continue
-            # Vypocet odmeny v sats
             if reward_unit == "czk":
                 czk_field = GRADE_REWARD_CZK_MAP[grade]
                 czk_amount = getattr(student, czk_field, 0) or 0
-                # Deficit logika
                 current_deficit = getattr(student, "czk_deficit", 0) or 0
                 balance = czk_amount - current_deficit
                 if balance <= 0:
-                    # Uloz deficit a preskoc
                     from .crud import update_student_czk_deficit
                     await update_student_czk_deficit(student.id, abs(balance))
                     await save_processed_mark(student.id, mhash)
@@ -209,7 +219,6 @@ async def process_student_grades(student):
 async def send_reward_via_withdraw_link(withdraw_link: str, amount_sats: int, memo: str) -> bool:
     """Posle odmenu primo na LN adresu/LNURL studenta."""
     try:
-        # TODO: implementace LNURL-pay/withdraw
         logger.info(f"send_reward_via_withdraw_link: {withdraw_link}, {amount_sats} sat - TODO")
         return False
     except Exception as e:
@@ -220,7 +229,6 @@ async def send_reward_via_withdraw_link(withdraw_link: str, amount_sats: int, me
 async def send_reward_via_email(student, amount_sats: int, memo: str) -> bool:
     """Vytvori LNURL-withdraw voucher a odesle email s QR kodem."""
     try:
-        # TODO: implementace vytvoreni withdraw voucheru pres lnbits_withdraw_key a odeslani emailu
         logger.info(f"send_reward_via_email: {student.email}, {amount_sats} sat - TODO")
         return False
     except Exception as e:
