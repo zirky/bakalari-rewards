@@ -54,15 +54,11 @@ async def fetch_bakalari_grades(bakalari_url: str, username: str, password: str)
                     },
                 )
                 logger.debug(f"Login odpoved {token_url}: HTTP {resp.status_code}")
-                # 404 = endpoint neexistuje, zkus dalsi prefix
                 if resp.status_code == 404:
                     last_error = f"{token_url} => HTTP 404 (endpoint nenalezen)"
                     continue
-                # Jakykoli jiny non-200 status = endpoint existuje, ale neco je spatne
-                # (napr. 400 invalid_client, 401 spatne heslo) - zastav hledani
                 if resp.status_code != 200:
                     body = resp.text[:500]
-                    # Zkus parsovat JSON chybu
                     try:
                         err_json = resp.json()
                         err_desc = err_json.get("error_description") or err_json.get("error") or body
@@ -83,7 +79,9 @@ async def fetch_bakalari_grades(bakalari_url: str, username: str, password: str)
                     headers={"Authorization": f"Bearer {token}"},
                 )
                 grades_resp.raise_for_status()
-                return grades_resp.json()
+                data = grades_resp.json()
+                logger.info(f"API /api/3/marks odpoved - klice: {list(data.keys())}, pocet Marks: {len(data.get('Marks', []))}")
+                return data
             except ValueError:
                 raise
             except Exception as e:
@@ -119,7 +117,7 @@ def should_check_student(student) -> bool:
         return True
     now = datetime.now(timezone.utc)
     try:
-        lc_str = student.last_check[:19]  # "2025-03-01T12:00:00"
+        lc_str = student.last_check[:19]
         lc = datetime.strptime(lc_str, "%Y-%m-%dT%H:%M:%S").replace(tzinfo=timezone.utc)
     except Exception:
         return True
@@ -140,27 +138,34 @@ async def process_student_grades(student):
             student.bakalari_password,
         )
         marks = grades_data.get("Marks", [])
+        logger.info(f"Student {student.name}: API vratilo {len(marks)} znamek celkem")
         last_check_dt = None
         if student.last_check:
             try:
                 lc_str = student.last_check[:19]
                 last_check_dt = datetime.strptime(lc_str, "%Y-%m-%dT%H:%M:%S")
+                logger.info(f"Student {student.name}: filtruji znamky novejsi nez {last_check_dt}")
             except Exception:
                 pass
         new_marks = []
+        skipped_old = 0
+        skipped_dedup = 0
         for mark in marks:
             mark_date_str = mark.get("MarkDate") or mark.get("EditDate", "")
             if last_check_dt and mark_date_str:
                 try:
                     mark_dt = datetime.strptime(mark_date_str[:19], "%Y-%m-%dT%H:%M:%S")
                     if mark_dt <= last_check_dt:
+                        skipped_old += 1
                         continue
                 except Exception:
                     pass
             mhash = mark_hash(student.id, mark)
             if await get_processed_mark(student.id, mhash):
+                skipped_dedup += 1
                 continue
             new_marks.append((mark, mhash))
+        logger.info(f"Student {student.name}: {len(new_marks)} novych, {skipped_old} starych, {skipped_dedup} duplikatu")
         if not new_marks:
             logger.info(f"Student {student.name}: zadne nove znamky")
             now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
@@ -177,6 +182,7 @@ async def process_student_grades(student):
             if grade_str and grade_str[0].isdigit():
                 grade = int(grade_str[0])
             if grade is None or grade not in GRADE_REWARD_MAP:
+                logger.debug(f"Student {student.name}: znamka '{grade_str}' neni ocenitelna, preskakuji")
                 await save_processed_mark(student.id, mhash)
                 continue
             if reward_unit == "czk":
