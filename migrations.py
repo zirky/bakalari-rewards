@@ -96,3 +96,9 @@ async def m007_add_reward_unit(db):
     """
     await _safe_alter(db, "ALTER TABLE bakalari_rewards.students ADD COLUMN reward_unit TEXT DEFAULT 'sat'")
     await _safe_alter(db, "ALTER TABLE bakalari_rewards.students ADD COLUMN lnbits_withdraw_key TEXT DEFAULT NULL")
+
+async def m008_add_backtest_mode(db):
+    """
+    Pridá sloupec backtest_mode pro bezpečné testování historických dat.
+    """
+    await _safe_alter(db, "ALTER TABLE bakalari_rewards.students ADD COLUMN backtest_mode INTEGER DEFAULT 0")
