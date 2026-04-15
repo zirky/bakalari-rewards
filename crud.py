@@ -39,9 +39,11 @@ async def create_student(data: CreateBakalariStudent) -> BakalariStudent:
         smtp_pass=data.smtp_pass,
         smtp_port=data.smtp_port,
         lnbits_withdraw_key=data.lnbits_withdraw_key,
+                backtest_mode=data.backtest_mode,
     )
     await db.insert("bakalari_rewards.students", student)
     return student
+            backtest_mode=data.backtest_mode,
 
 
 async def get_student(student_id: str) -> Optional[BakalariStudent]:
@@ -105,7 +107,8 @@ async def update_student(data: CreateBakalariStudent) -> Optional[BakalariStuden
             smtp_user = :smtp_user,
             smtp_pass = :smtp_pass,
             smtp_port = :smtp_port,
-            lnbits_withdraw_key = :lnbits_withdraw_key
+            lnbits_withdraw_key = :lnbits_withdraw_ke
+                        backtest_mode = :backtest_mode,
         WHERE id = :id
         """,
         {
@@ -138,6 +141,7 @@ async def update_student(data: CreateBakalariStudent) -> Optional[BakalariStuden
             "smtp_pass": data.smtp_pass,
             "smtp_port": data.smtp_port,
             "lnbits_withdraw_key": data.lnbits_withdraw_key,
+                        "backtest_mode": data.backtest_mode,
         },
     )
     return await get_student(data.id)
