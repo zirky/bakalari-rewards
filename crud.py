@@ -39,11 +39,10 @@ async def create_student(data: CreateBakalariStudent) -> BakalariStudent:
         smtp_pass=data.smtp_pass,
         smtp_port=data.smtp_port,
         lnbits_withdraw_key=data.lnbits_withdraw_key,
-                backtest_mode=data.backtest_mode,
+            backtest_mode=data.backtest_mode,
     )
     await db.insert("bakalari_rewards.students", student)
     return student
-            backtest_mode=data.backtest_mode,
 
 
 async def get_student(student_id: str) -> Optional[BakalariStudent]:
