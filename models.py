@@ -32,6 +32,7 @@ class CreateBakalariStudent(BaseModel):
     smtp_pass: Optional[str] = None
     smtp_port: Optional[int] = 465
     lnbits_withdraw_key: Optional[str] = None
+        backtest_mode: bool = False
 
 
 class BakalariStudent(BaseModel):
@@ -64,3 +65,4 @@ class BakalariStudent(BaseModel):
     smtp_pass: Optional[str] = None
     smtp_port: Optional[int] = 465
     lnbits_withdraw_key: Optional[str] = None
+    backtest_mode: bool = False
