@@ -147,6 +147,8 @@ async def update_student(data: CreateBakalariStudent) -> Optional[BakalariStuden
 
 
 async def update_student_last_check(student_id: str, last_check: str) -> None:
+    # Smazat zpracovane znamky starsi nez novy last_check
+    await delete_old_processed_marks(student_id, last_check)
     await db.execute(
         """
         UPDATE bakalari_rewards.students
@@ -190,4 +192,14 @@ async def save_processed_mark(student_id: str, mark_hash: str) -> None:
         VALUES (:sid, :mh, :ts)
         """,
         {"sid": student_id, "mh": mark_hash, "ts": now_iso},
+    )
+
+async def delete_old_processed_marks(student_id: str, cutoff_date: str) -> None:
+    """Smaze zpracovane znamky starsi nez cutoff_date."""
+    await db.execute(
+        """
+        DELETE FROM bakalari_rewards.processed_marks
+        WHERE student_id = :sid AND processed_at < :cutoff
+        """,
+        {"sid": student_id, "cutoff": cutoff_date},
     )
