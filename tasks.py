@@ -9,6 +9,7 @@ from .crud import (
     update_student_last_check,
     get_processed_mark,
     save_processed_mark,
+    delete_old_processed_marks,
 )
 
 GRADE_REWARD_MAP = {
@@ -126,8 +127,7 @@ def should_check_student(student) -> bool:
     return (now - lc) >= delta
 
 
-async def process_student_grades(student):
-    """Zkontroluje nove znamky studenta a posle odmeny."""
+async def process_student_grades(student): -> None:    """Zkontroluje nove znamky studenta a posle odmeny."""
     try:
         if not should_check_student(student):
             logger.debug(f"Student {student.name}: prilis brzy na dalsi kontrolu, preskakuji")
@@ -152,6 +152,12 @@ async def process_student_grades(student):
         
         last_check_dt = None
         if student.last_check:
+        # Backtest režim: smazat staré záznamy před kontrolou
+        backtest_mode = getattr(student, "backtest_mode", False)
+        if backtest_mode and last_check_dt:
+            from .crud import delete_old_processed_marks
+            await delete_old_processed_marks(student.id, last_check_dt.strftime("%Y-%m-%dT%H:%M:%S"))
+            logger.info(f"Student {student.name}: backtest režim - smazány záznamy starší než {last_check_dt}")
             try:
                 lc_str = student.last_check[:19]
                 last_check_dt = datetime.strptime(lc_str, "%Y-%m-%dT%H:%M:%S")
