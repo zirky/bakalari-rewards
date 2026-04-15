@@ -131,7 +131,7 @@ async def process_student_grades(student): -> None:    """Zkontroluje nove znamk
     try:
         if not should_check_student(student):
             logger.debug(f"Student {student.name}: prilis brzy na dalsi kontrolu, preskakuji")
-            return
+
         grades_data = await fetch_bakalari_grades(
             student.bakalari_url,
             student.bakalari_username,
