@@ -301,4 +301,8 @@ async def bakalari_rewards_task():
                 await process_student_grades(student)
             await asyncio.sleep(60)
         except asyncio.CancelledError:
-            logger.info("
+            logger.info("Bakalari Rewards task cancelled.")
+            break
+        except Exception as exc:
+            logger.warning(f"Bakalari Rewards task error: {exc}")
+            await asyncio.sleep(60)
