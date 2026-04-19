@@ -106,12 +106,12 @@ async def update_student(data: CreateBakalariStudent) -> Optional[BakalariStuden
             smtp_user = :smtp_user,
             smtp_pass = :smtp_pass,
             smtp_port = :smtp_port,
-            lnbits_withdraw_key = :lnbits_withdraw_key,
-                        backtest_mode = :backtest_mode,
+            lnbits_withdraw_key = :lnbits_withdraw_key
+                        backtest_mode = :backtest_mode
         WHERE id = :id
         """,
         {
-            "id": data.id,
+            "id": data.id
             "name": data.name,
             "wallet": data.wallet,
             "withdraw_link": data.withdraw_link,
