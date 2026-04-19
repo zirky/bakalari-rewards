@@ -9,7 +9,7 @@ from .crud import (
     update_student_last_check,
     get_processed_mark,
     save_processed_mark,
-    delete_old_processed_marks,
+    delete_processed_marks_from,
 )
 
 GRADE_REWARD_MAP = {
@@ -155,7 +155,6 @@ async def process_student_grades(student) -> None:
 
         last_check_dt = None
         if student.last_check:
-            
             try:
                 lc_str = student.last_check[:19]
                 last_check_dt = datetime.strptime(lc_str, "%Y-%m-%dT%H:%M:%S")
@@ -163,14 +162,11 @@ async def process_student_grades(student) -> None:
             except Exception:
                 pass
 
-                # Backtest režim: smazat staré záznamy po parsování
-                backtest_mode = getattr(student, "backtest_mode", False)
-                if backtest_mode and last_check_dt:
-                                from .crud import delete_old_processed_marks
-                                await delete_old_processed_marks(student.id, last_check_dt.strftime("%Y-%m-%dT%H:%M:%S"))
-                                logger.info(f"Student {student.name}: backtest režim - smazány záznamy starší než {last_check_dt}")
-
-        
+        # Backtest režim: smazat záznamy od nového last_check
+        backtest_mode = getattr(student, "backtest_mode", False)
+        if backtest_mode and last_check_dt:
+            await delete_processed_marks_from(student.id, last_check_dt.strftime("%Y-%m-%dT%H:%M:%S"))
+            logger.info(f"Student {student.name}: backtest režim - smazány záznamy od {last_check_dt}")
 
         new_marks = []
         skipped_old = 0
@@ -305,8 +301,4 @@ async def bakalari_rewards_task():
                 await process_student_grades(student)
             await asyncio.sleep(60)
         except asyncio.CancelledError:
-            logger.info("Bakalari Rewards task cancelled.")
-            break
-        except Exception as exc:
-            logger.warning(f"Bakalari Rewards task error: {exc}")
-            await asyncio.sleep(60)
+            logger.info("
