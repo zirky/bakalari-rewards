@@ -68,22 +68,37 @@
       <q-btn color="primary" label="Přidat" @click="createStudent" />
 
                 <!-- BACKTEST MÓD - NEBEZPEČNÉ! -->
-                <div class="text-subtitle2 text-negative q-mt-md">
-                            <q-icon name="warning" size="sm" /> Pokročilé nastavení (nebezpečné!)
-                                      </div>
-                <div class="row q-mt-sm">
-                            <div class="col-12">
-                                          <q-toggle
-                                                          v-model="newStudent.backtest_mode"
-                                                          color="negative"
-                                                          label="Backtest mód (smaže všechny staré záznamy!)"
-                                                        >
-                                                          <q-tooltip>
-                                                                            VAROVÁNÍ: Tento mód smaže všechny zpracované známky starší než poslední kontrola.<br/>
-                                                                            Použijte POUZE pro testování! Po testování VYPNĚTE!
-                                                                          </q-tooltip>
-                                                        </q-toggle>
-                                        </div>
+              <div class="text-subtitle2 text-negative q-mt-md">
+                <q-icon name="warning" size="sm" /> Pokročilé nastavení (nebezpečné!)
+              </div>
+              
+              <!-- Vyděleň s varovaním při zapnutém backtest -->
+              <q-banner v-if="newStudent.backtest_mode" class="bg-negative text-white q-mt-sm" dense>
+                <template v-slot:avatar>
+                  <q-icon name="warning" color="white" />
+                </template>
+                <strong>VAROVÁNÍ:</strong> Backtest mód je ZAPNUTÝ! Při uložení budou smazány všechny staré záznamy!
+              </q-banner>
+              
+              <div class="row items-center q-mt-sm q-gutter-sm">
+                <q-toggle
+                  v-model="newStudent.backtest_mode"
+                  color="negative"
+                  keep-color
+                  dense
+                  @click.stop
+                />
+                <div class="text-body2">
+                  <strong class="text-negative">Backtest mód</strong>
+                  <q-icon name="help_outline" size="xs" class="q-ml-xs">
+                    <q-tooltip max-width="300px">
+                      <strong>VAROVÁNÍ - Nebezpečná funkce!</strong><br/><br/>
+                      Backtest mód smaže všechny staré zpracované známky a umožní znovu testovat systém odměn.<br/><br/>
+                      <strong>Použijte POUZE pro testování!</strong>
+                    </q-tooltip>
+                  </q-icon>
+                </div>
+              </div>                        </div>
                           </div>
     </q-card-actions>
   </q-card>
