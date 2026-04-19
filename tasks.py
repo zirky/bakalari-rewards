@@ -155,12 +155,6 @@ async def process_student_grades(student) -> None:
 
         last_check_dt = None
         if student.last_check:
-            # Backtest režim: smazat staré záznamy před kontrolou
-            backtest_mode = getattr(student, "backtest_mode", False)
-            if backtest_mode and last_check_dt:
-                from .crud import delete_old_processed_marks
-                await delete_old_processed_marks(student.id, last_check_dt.strftime("%Y-%m-%dT%H:%M:%S"))
-                logger.info(f"Student {student.name}: backtest režim - smazány záznamy starší než {last_check_dt}")
             
             try:
                 lc_str = student.last_check[:19]
@@ -168,6 +162,15 @@ async def process_student_grades(student) -> None:
                 logger.info(f"Student {student.name}: filtruji znamky novejsi nez {last_check_dt}")
             except Exception:
                 pass
+
+                # Backtest režim: smazat staré záznamy po parsování
+                backtest_mode = getattr(student, "backtest_mode", False)
+                if backtest_mode and last_check_dt:
+                                from .crud import delete_old_processed_marks
+                                await delete_old_processed_marks(student.id, last_check_dt.strftime("%Y-%m-%dT%H:%M:%S"))
+                                logger.info(f"Student {student.name}: backtest režim - smazány záznamy starší než {last_check_dt}")
+
+        
 
         new_marks = []
         skipped_old = 0
