@@ -36,7 +36,8 @@ window.app = Vue.createApp({
           smtp_port: 465,
           lnbits_withdraw_key: '',
           withdraw_link: null,
-          czk_deficit: 0
+          czk_deficit: 0,
+          backtest_mode: false
         }
       },
       studentsTable: {
@@ -97,7 +98,8 @@ window.app = Vue.createApp({
         smtp_port: student.smtp_port || 465,
         lnbits_withdraw_key: student.lnbits_withdraw_key || '',
         withdraw_link: student.withdraw_link || null,
-        czk_deficit: student.czk_deficit || 0
+        czk_deficit: student.czk_deficit || 0,
+        backtest_mode: student.backtest_mode || false
       }
       this.formDialog.editMode = true
       this.formDialog.show = true
@@ -195,7 +197,8 @@ window.app = Vue.createApp({
         smtp_port: 465,
         lnbits_withdraw_key: '',
         withdraw_link: null,
-        czk_deficit: 0
+        czk_deficit: 0,
+        backtest_mode: false
       }
     }
   },
