@@ -127,16 +127,19 @@ def should_check_student(student) -> bool:
     return (now - lc) >= delta
 
 
-async def process_student_grades(student): -> None:    """Zkontroluje nove znamky studenta a posle odmeny."""
+async def process_student_grades(student) -> None:
+    """Zkontroluje nove znamky studenta a posle odmeny."""
     try:
         if not should_check_student(student):
             logger.debug(f"Student {student.name}: prilis brzy na dalsi kontrolu, preskakuji")
+            return
 
         grades_data = await fetch_bakalari_grades(
             student.bakalari_url,
             student.bakalari_username,
             student.bakalari_password,
         )
+
         # Parse grades from Subjects structure (Bakalari API returns Subjects -> Marks)
         subjects = grades_data.get("Subjects", grades_data.get("Marks", []))
         marks = []
@@ -147,23 +150,25 @@ async def process_student_grades(student): -> None:    """Zkontroluje nove znamk
                 # Add subject name to mark for later use
                 mark["Subject"] = subject_name
                 marks.append(mark)
-        
+
         logger.info(f"Student {student.name}: API vratilo {len(marks)} znamek celkem")
-        
+
         last_check_dt = None
         if student.last_check:
-        # Backtest režim: smazat staré záznamy před kontrolou
-        backtest_mode = getattr(student, "backtest_mode", False)
-        if backtest_mode and last_check_dt:
-            from .crud import delete_old_processed_marks
-            await delete_old_processed_marks(student.id, last_check_dt.strftime("%Y-%m-%dT%H:%M:%S"))
-            logger.info(f"Student {student.name}: backtest režim - smazány záznamy starší než {last_check_dt}")
+            # Backtest režim: smazat staré záznamy před kontrolou
+            backtest_mode = getattr(student, "backtest_mode", False)
+            if backtest_mode and last_check_dt:
+                from .crud import delete_old_processed_marks
+                await delete_old_processed_marks(student.id, last_check_dt.strftime("%Y-%m-%dT%H:%M:%S"))
+                logger.info(f"Student {student.name}: backtest režim - smazány záznamy starší než {last_check_dt}")
+            
             try:
                 lc_str = student.last_check[:19]
                 last_check_dt = datetime.strptime(lc_str, "%Y-%m-%dT%H:%M:%S")
                 logger.info(f"Student {student.name}: filtruji znamky novejsi nez {last_check_dt}")
             except Exception:
                 pass
+
         new_marks = []
         skipped_old = 0
         skipped_dedup = 0
@@ -182,35 +187,37 @@ async def process_student_grades(student): -> None:    """Zkontroluje nove znamk
                 skipped_dedup += 1
                 continue
             new_marks.append((mark, mhash))
+
         logger.info(f"Student {student.name}: {len(new_marks)} novych, {skipped_old} starych, {skipped_dedup} duplikatu")
+
         if not new_marks:
             logger.info(f"Student {student.name}: zadne nove znamky")
             now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
             await update_student_last_check(student.id, now_iso)
             return
-        
+
         # === NOVÁ LOGIKA: AGREGACE ODMĚN ===
         reward_unit = getattr(student, "reward_unit", "sat")
         czk_per_btc = None
         if reward_unit == "czk":
             czk_per_btc = await get_btc_czk_rate()
-        
+
         # Projdeme všechny známky a spočítáme celkovou odměnu
         total_reward_sats = 0
         grade_counts = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0}
         processed_marks = []
-        
+
         for mark, mhash in new_marks:
             grade_str = str(mark.get("MarkText", "")).strip()
             grade = None
             if grade_str and grade_str[0].isdigit():
                 grade = int(grade_str[0])
-            
+
             if grade is None or grade not in GRADE_REWARD_MAP:
                 logger.debug(f"Student {student.name}: znamka '{grade_str}' neni ocenitelna, preskakuji")
                 processed_marks.append(mhash)
                 continue
-            
+
             if reward_unit == "czk":
                 czk_field = GRADE_REWARD_CZK_MAP[grade]
                 czk_amount = getattr(student, czk_field, 0) or 0
@@ -227,18 +234,18 @@ async def process_student_grades(student): -> None:    """Zkontroluje nove znamk
             else:
                 sat_field = GRADE_REWARD_MAP[grade]
                 reward_sats = getattr(student, sat_field, 0) or 0
-            
+
             total_reward_sats += reward_sats
             grade_counts[grade] += 1
             processed_marks.append(mhash)
-        
+
         grade_summary = ", ".join([f"{count}x{grade}" for grade, count in grade_counts.items() if count > 0])
         period = getattr(student, "check_period", "weekly")
         period_text = "mesic" if period == "monthly" else "tyden"
         memo = f"Odmena za {period_text}: {grade_summary} (celkem {len(processed_marks)} znamek)"
-        
+
         logger.info(f"Student {student.name}: celkova odmena za obdobi: {total_reward_sats} sat ({grade_summary})")
-        
+
         payment_sent = False
         if total_reward_sats > 0:
             payout_method = getattr(student, "payout_method", "email")
@@ -248,18 +255,18 @@ async def process_student_grades(student): -> None:    """Zkontroluje nove znamk
                 payment_sent = await send_reward_via_email(student, total_reward_sats, memo)
             else:
                 logger.warning(f"Student {student.name}: neni nastavena metoda vyplaty, preskakuji odmenu")
-        
+
         for mhash in processed_marks:
             await save_processed_mark(student.id, mhash)
-        
+
         now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
         await update_student_last_check(student.id, now_iso)
-        
+
         if payment_sent:
             logger.info(f"Student {student.name}: zpracovano {len(processed_marks)} znamek, odeslana 1 platba ({total_reward_sats} sat)")
         else:
             logger.info(f"Student {student.name}: zpracovano {len(processed_marks)} znamek, platba nebyla odeslana")
-    
+
     except Exception as exc:
         logger.warning(f"Chyba pri zpracovani studenta {student.name}: {exc}")
 
