@@ -39,7 +39,7 @@ async def create_student(data: CreateBakalariStudent) -> BakalariStudent:
         smtp_pass=data.smtp_pass,
         smtp_port=data.smtp_port,
         lnbits_withdraw_key=data.lnbits_withdraw_key,
-            backtest_mode=data.backtest_mode,
+        backtest_mode=data.backtest_mode,
     )
     await db.insert("bakalari_rewards.students", student)
     return student
@@ -107,7 +107,7 @@ async def update_student(data: CreateBakalariStudent) -> Optional[BakalariStuden
             smtp_pass = :smtp_pass,
             smtp_port = :smtp_port,
             lnbits_withdraw_key = :lnbits_withdraw_key,
-                        backtest_mode = :backtest_mode
+            backtest_mode = :backtest_mode
         WHERE id = :id
         """,
         {
@@ -140,7 +140,7 @@ async def update_student(data: CreateBakalariStudent) -> Optional[BakalariStuden
             "smtp_pass": data.smtp_pass,
             "smtp_port": data.smtp_port,
             "lnbits_withdraw_key": data.lnbits_withdraw_key,
-                        "backtest_mode": data.backtest_mode,
+            "backtest_mode": data.backtest_mode,
         },
     )
     return await get_student(data.id)
@@ -192,12 +192,13 @@ async def save_processed_mark(student_id: str, mark_hash: str) -> None:
         {"sid": student_id, "mh": mark_hash, "ts": now_iso},
     )
 
-async def delete_old_processed_marks(student_id: str, cutoff_date: str) -> None:
-    """Smaze zpracovane znamky starsi nez cutoff_date."""
+
+async def delete_processed_marks_from(student_id: str, from_date: str) -> None:
+    """Smaze zpracovane znamky od urciteho data (>=) pro backtest rezim."""
     await db.execute(
         """
         DELETE FROM bakalari_rewards.processed_marks
-        WHERE student_id = :sid AND processed_at < :cutoff
+        WHERE student_id = :sid AND processed_at >= :from_date
         """,
-        {"sid": student_id, "cutoff": cutoff_date},
+        {"sid": student_id, "from_date": from_date},
     )
