@@ -110,6 +110,16 @@
         ></q-input>
       </div>
 
+      <q-toggle
+        v-model="formDialog.data.backtest_mode"
+        label="Backtest režim"
+        color="primary"
+        class="q-mb-xs"
+      />
+      <div class="text-caption text-grey-7 q-mb-md">
+        Povolí znovuzpracování starších známek podle poslední kontroly.
+      </div>
+
       <!-- Odměny -->
       <div class="text-subtitle2 q-mb-sm q-mt-md">Odměny za známku</div>
       <q-btn-toggle
