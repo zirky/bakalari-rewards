@@ -106,7 +106,7 @@ async def update_student(data: CreateBakalariStudent) -> Optional[BakalariStuden
             smtp_user = :smtp_user,
             smtp_pass = :smtp_pass,
             smtp_port = :smtp_port,
-            lnbits_withdraw_key = :lnbits_withdraw_ke
+            lnbits_withdraw_key = :lnbits_withdraw_key,
                         backtest_mode = :backtest_mode,
         WHERE id = :id
         """,
@@ -147,8 +147,6 @@ async def update_student(data: CreateBakalariStudent) -> Optional[BakalariStuden
 
 
 async def update_student_last_check(student_id: str, last_check: str) -> None:
-    # Smazat zpracovane znamky starsi nez novy last_check
-    await delete_old_processed_marks(student_id, last_check)
     await db.execute(
         """
         UPDATE bakalari_rewards.students
