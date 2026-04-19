@@ -110,14 +110,19 @@
         ></q-input>
       </div>
 
-      <q-toggle
-        v-model="formDialog.data.backtest_mode"
-        label="Backtest režim"
-        color="primary"
-        class="q-mb-xs"
-      />
-      <div class="text-caption text-grey-7 q-mb-md">
-        Povolí znovuzpracování starších známek podle poslední kontroly.
+      <div class="q-mb-md">
+        <div class="row items-center no-wrap q-gutter-sm">
+          <q-toggle
+            v-model="formDialog.data.backtest_mode"
+            color="primary"
+          />
+          <div>
+            <div class="text-body1">Backtest režim</div>
+            <div class="text-caption text-grey-7">
+              Povolí znovuzpracování starších známek podle poslední kontroly.
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Odměny -->
