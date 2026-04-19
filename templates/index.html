@@ -66,6 +66,25 @@
     <q-card-actions align="right">
       <q-btn flat label="Zrušit" @click="showStudentDialog = false" />
       <q-btn color="primary" label="Přidat" @click="createStudent" />
+
+                <!-- BACKTEST MÓD - NEBEZPEČNÉ! -->
+                <div class="text-subtitle2 text-negative q-mt-md">
+                            <q-icon name="warning" size="sm" /> Pokročilé nastavení (nebezpečné!)
+                                      </div>
+                <div class="row q-mt-sm">
+                            <div class="col-12">
+                                          <q-toggle
+                                                          v-model="newStudent.backtest_mode"
+                                                          color="negative"
+                                                          label="Backtest mód (smaže všechny staré záznamy!)"
+                                                        >
+                                                          <q-tooltip>
+                                                                            VAROVÁNÍ: Tento mód smaže všechny zpracované známky starší než poslední kontrola.<br/>
+                                                                            Použijte POUZE pro testování! Po testování VYPNĚTE!
+                                                                          </q-tooltip>
+                                                        </q-toggle>
+                                        </div>
+                          </div>
     </q-card-actions>
   </q-card>
 </q-dialog>
@@ -95,6 +114,7 @@
         columns: [
           { name: 'name', label: 'Jméno', field: 'name', align: 'left' },
           { name: 'bakalari_url', label: 'URL školy', field: 'bakalari_url', align: 'left' },
+                  backtest_mode: false,
           { name: 'reward_sats', label: 'Odměna za známky', align: 'left' },
           { name: 'last_check', label: 'Poslední kontrola', field: 'last_check', align: 'left' },
           { name: 'actions', label: 'Akce', align: 'center' }
