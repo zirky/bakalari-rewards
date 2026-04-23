@@ -43,10 +43,10 @@ window.app = Vue.createApp({
       studentsTable: {
         columns: [
           {name: 'name', align: 'left', label: 'Student', field: 'name'},
-          {name: 'bakalari_url', align: 'left', label: 'URL školy', field: 'bakalari_url'},
+          {name: 'bakalari_url', align: 'left', label: 'URL skoly', field: 'bakalari_url'},
           {name: 'check_period', align: 'left', label: 'Frekvence', field: 'check_period'},
-          {name: 'last_check', align: 'left', label: 'Poslední kontrola', field: 'last_check'},
-          {name: 'reward_sats', align: 'left', label: 'Odměny', field: 'reward_sats'},
+          {name: 'last_check', align: 'left', label: 'Posledni kontrola', field: 'last_check'},
+          {name: 'reward_sats', align: 'left', label: 'Odmeny', field: 'reward_sats'},
           {name: 'actions', align: 'right', label: '', field: 'actions'}
         ],
         pagination: {rowsPerPage: 10}
@@ -76,7 +76,7 @@ window.app = Vue.createApp({
         name: student.name,
         bakalari_url: student.bakalari_url,
         bakalari_username: student.bakalari_username,
-        bakalari_password: student.bakalari_password,
+        bakalari_password: student.bakalari_password || '',
         reward_unit: student.reward_unit || 'sat',
         reward_grade_1: student.reward_grade_1,
         reward_grade_2: student.reward_grade_2,
@@ -113,11 +113,18 @@ window.app = Vue.createApp({
     },
     createStudent: function () {
       var self = this
-      var data = Object.assign({}, this.formDialog.data)
+      var sentData = Object.assign({}, this.formDialog.data)
       LNbits.api
-        .request('POST', '/bakalari_rewards/api/v1/students', this.g.user.wallets[0].adminkey, data)
+        .request('POST', '/bakalari_rewards/api/v1/students', this.g.user.wallets[0].adminkey, sentData)
         .then(function (response) {
-          self.students.push(response.data)
+          // Zachovat citliva pole ktera API nevraci
+          var merged = Object.assign({}, response.data, {
+            bakalari_password: sentData.bakalari_password,
+            smtp_pass: sentData.smtp_pass,
+            lnbits_withdraw_key: sentData.lnbits_withdraw_key,
+            withdraw_link: sentData.withdraw_link
+          })
+          self.students.push(merged)
           self.formDialog.show = false
           self.resetForm()
         })
@@ -127,18 +134,25 @@ window.app = Vue.createApp({
     },
     updateStudent: function () {
       var self = this
-      var data = Object.assign({}, this.formDialog.data)
+      var sentData = Object.assign({}, this.formDialog.data)
       LNbits.api
         .request(
           'PUT',
-          '/bakalari_rewards/api/v1/students/' + data.id,
+          '/bakalari_rewards/api/v1/students/' + sentData.id,
           this.g.user.wallets[0].adminkey,
-          data
+          sentData
         )
         .then(function (response) {
-          var idx = self.students.findIndex(function (s) { return s.id === data.id })
+          var idx = self.students.findIndex(function (s) { return s.id === sentData.id })
           if (idx !== -1) {
-            self.students.splice(idx, 1, response.data)
+            // Zachovat citliva pole ktera API nevraci
+            var merged = Object.assign({}, response.data, {
+              bakalari_password: sentData.bakalari_password,
+              smtp_pass: sentData.smtp_pass,
+              lnbits_withdraw_key: sentData.lnbits_withdraw_key,
+              withdraw_link: sentData.withdraw_link
+            })
+            self.students.splice(idx, 1, merged)
           }
           self.formDialog.show = false
           self.resetForm()
@@ -150,7 +164,7 @@ window.app = Vue.createApp({
     deleteStudent: function (id) {
       var self = this
       LNbits.utils
-        .confirmDialog('Opravdu chcete smazat tohoto žáka?')
+        .confirmDialog('Opravdu chcete smazat tohoto zaka?')
         .onOk(function () {
           LNbits.api
             .request(
@@ -167,7 +181,7 @@ window.app = Vue.createApp({
         })
     },
     periodLabel: function (period) {
-      return period === 'monthly' ? 'Měsíčně' : 'Týdně'
+      return period === 'monthly' ? 'Mesicne' : 'Tydne'
     },
     resetForm: function () {
       this.formDialog.data = {
