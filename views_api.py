@@ -11,17 +11,17 @@ from .crud import (
     get_students,
     update_student,
 )
-from .models import CreateBakalariStudent, BakalariStudent
+from .models import CreateBakalariStudent, BakalariStudent, BakalariStudentPublic
 
 bakalari_rewards_api_router = APIRouter()
 
 
-@bakalari_rewards_api_router.get("/api/v1/students", response_model=List[BakalariStudent])
+@bakalari_rewards_api_router.get("/api/v1/students", response_model=List[BakalariStudentPublic])
 async def api_get_students(wallet: WalletTypeInfo = Depends(require_invoice_key)):
     return await get_students([wallet.wallet.id])
 
 
-@bakalari_rewards_api_router.post("/api/v1/students", response_model=BakalariStudent)
+@bakalari_rewards_api_router.post("/api/v1/students", response_model=BakalariStudentPublic)
 async def api_create_student(
     data: CreateBakalariStudent,
     wallet: WalletTypeInfo = Depends(require_admin_key),
@@ -30,7 +30,7 @@ async def api_create_student(
     return await create_student(data)
 
 
-@bakalari_rewards_api_router.put("/api/v1/students/{student_id}", response_model=BakalariStudent)
+@bakalari_rewards_api_router.put("/api/v1/students/{student_id}", response_model=BakalariStudentPublic)
 async def api_update_student(
     student_id: str,
     data: CreateBakalariStudent,
