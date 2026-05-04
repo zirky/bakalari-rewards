@@ -1,15 +1,41 @@
 from pydantic import BaseModel
 from typing import Optional
+import os
+
+# Fernet sifrovani - volitelne, aktivuje se env promennou BAKALARI_FERNET_KEY
+try:
+    from cryptography.fernet import Fernet
+    _fernet_key = os.environ.get("BAKALARI_FERNET_KEY", "")
+    _fernet = Fernet(_fernet_key.encode()) if _fernet_key else None
+except ImportError:
+    _fernet = None
+
+
+def encrypt_password(plaintext: str) -> str:
+    """Zasifrovani hesla Fernetem. Pokud klic neni nastaven, vraci plaintext."""
+    if _fernet and plaintext:
+        return _fernet.encrypt(plaintext.encode()).decode()
+    return plaintext
+
+
+def decrypt_password(ciphertext: str) -> str:
+    """Desifrovani hesla Fernetem. Pokud klic neni nastaven, vraci plaintext."""
+    if _fernet and ciphertext:
+        try:
+            return _fernet.decrypt(ciphertext.encode()).decode()
+        except Exception:
+            return ciphertext  # fallback - uz plaintext
+    return ciphertext
 
 
 class CreateBakalariStudent(BaseModel):
     id: Optional[str] = None
     name: str
     wallet: Optional[str] = None
-    withdraw_link: Optional[str] = None
     bakalari_url: str
     bakalari_username: str
     bakalari_password: str
+    ln_address: Optional[str] = None
     reward_grade_1: int = 100
     reward_grade_2: int = 75
     reward_grade_3: int = 50
@@ -24,14 +50,7 @@ class CreateBakalariStudent(BaseModel):
     reward_grade_5_czk: float = 0
     check_period: Optional[str] = 'weekly'
     reward_unit: Optional[str] = 'sat'
-    email: Optional[str] = None
-    payout_method: Optional[str] = 'email'
     czk_deficit: float = 0
-    smtp_host: Optional[str] = None
-    smtp_user: Optional[str] = None
-    smtp_pass: Optional[str] = None
-    smtp_port: Optional[int] = 465
-    lnbits_withdraw_key: Optional[str] = None
     backtest_mode: bool = False
 
 
@@ -39,10 +58,10 @@ class BakalariStudent(BaseModel):
     id: str
     name: str
     wallet: Optional[str] = None
-    withdraw_link: Optional[str] = None
     bakalari_url: str
     bakalari_username: str
     bakalari_password: str
+    ln_address: Optional[str] = None
     reward_grade_1: int = 100
     reward_grade_2: int = 75
     reward_grade_3: int = 50
@@ -57,24 +76,18 @@ class BakalariStudent(BaseModel):
     reward_grade_5_czk: float = 0
     check_period: Optional[str] = 'weekly'
     reward_unit: Optional[str] = 'sat'
-    email: Optional[str] = None
-    payout_method: Optional[str] = 'email'
     czk_deficit: float = 0
-    smtp_host: Optional[str] = None
-    smtp_user: Optional[str] = None
-    smtp_pass: Optional[str] = None
-    smtp_port: Optional[int] = 465
-    lnbits_withdraw_key: Optional[str] = None
     backtest_mode: bool = False
 
 
 class BakalariStudentPublic(BaseModel):
-    """Model pro API odpovedi - neobsahuje citliva pole (hesla, API klice)."""
+    """Model pro API odpovedi - neobsahuje citliva pole (hesla)."""
     id: str
     name: str
     wallet: Optional[str] = None
     bakalari_url: str
     bakalari_username: str
+    ln_address: Optional[str] = None
     reward_grade_1: int = 100
     reward_grade_2: int = 75
     reward_grade_3: int = 50
@@ -89,12 +102,6 @@ class BakalariStudentPublic(BaseModel):
     reward_grade_5_czk: float = 0
     check_period: Optional[str] = 'weekly'
     reward_unit: Optional[str] = 'sat'
-    email: Optional[str] = None
-    payout_method: Optional[str] = 'email'
     czk_deficit: float = 0
-    smtp_host: Optional[str] = None
-    smtp_user: Optional[str] = None
-    smtp_port: Optional[int] = 465
     backtest_mode: bool = False
-    # Vynechana citliva pole:
-    # bakalari_password, smtp_pass, lnbits_withdraw_key, withdraw_link
+    # Vynechana citliva pole: bakalari_password
