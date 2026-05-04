@@ -69,6 +69,16 @@ async def delete_student(student_id: str) -> None:
 
 
 async def update_student(data: CreateBakalariStudent) -> Optional[BakalariStudent]:
+    existing = await get_student(data.id)
+    if not existing:
+        return None
+
+    password_to_store = (
+        encrypt_password(data.bakalari_password)
+        if data.bakalari_password
+        else existing.bakalari_password
+    )
+
     await db.execute(
         """
         UPDATE bakalari_rewards.students SET
@@ -102,7 +112,7 @@ async def update_student(data: CreateBakalariStudent) -> Optional[BakalariStuden
             "wallet": data.wallet,
             "bakalari_url": data.bakalari_url,
             "bakalari_username": data.bakalari_username,
-            "bakalari_password": encrypt_password(data.bakalari_password),
+            "bakalari_password": password_to_store,
             "ln_address": data.ln_address,
             "reward_grade_1": data.reward_grade_1,
             "reward_grade_2": data.reward_grade_2,
@@ -160,6 +170,7 @@ async def get_processed_mark(student_id: str, mark_hash: str) -> bool:
 async def save_processed_mark(student_id: str, mark_hash: str) -> None:
     """Ulozi zaznam o zpracovane znamce."""
     from datetime import datetime, timezone
+
     now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
     await db.execute(
         """
