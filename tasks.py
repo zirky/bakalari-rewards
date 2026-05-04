@@ -43,7 +43,7 @@ async def fetch_bakalari_grades(bakalari_url: str, username: str, password: str)
     last_error = "zadny prefix nevratil uspech"
     async with httpx.AsyncClient(timeout=30, verify=False) as client:
         for prefix in prefixes:
-            token_url = f"{base}{prefix}/api/login"
+            token_url = f"{base}{prefix}/api/3/login"
             logger.debug(f"Zkousim login: {token_url}")
             try:
                 resp = await client.post(
