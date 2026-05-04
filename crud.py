@@ -2,7 +2,7 @@ from lnbits.db import Database
 from lnbits.helpers import urlsafe_short_hash
 from typing import Optional, List
 
-from .models import CreateBakalariStudent, BakalariStudent
+from .models import CreateBakalariStudent, BakalariStudent, encrypt_password
 
 db = Database("ext_bakalari_rewards")
 
@@ -13,10 +13,10 @@ async def create_student(data: CreateBakalariStudent) -> BakalariStudent:
         id=student_id,
         name=data.name,
         wallet=data.wallet,
-        withdraw_link=data.withdraw_link,
         bakalari_url=data.bakalari_url,
         bakalari_username=data.bakalari_username,
-        bakalari_password=data.bakalari_password,
+        bakalari_password=encrypt_password(data.bakalari_password),
+        ln_address=data.ln_address,
         reward_grade_1=data.reward_grade_1,
         reward_grade_2=data.reward_grade_2,
         reward_grade_3=data.reward_grade_3,
@@ -31,14 +31,7 @@ async def create_student(data: CreateBakalariStudent) -> BakalariStudent:
         reward_grade_5_czk=data.reward_grade_5_czk,
         check_period=data.check_period,
         reward_unit=data.reward_unit,
-        email=data.email,
-        payout_method=data.payout_method,
         czk_deficit=data.czk_deficit,
-        smtp_host=data.smtp_host,
-        smtp_user=data.smtp_user,
-        smtp_pass=data.smtp_pass,
-        smtp_port=data.smtp_port,
-        lnbits_withdraw_key=data.lnbits_withdraw_key,
         backtest_mode=data.backtest_mode,
     )
     await db.insert("bakalari_rewards.students", student)
@@ -81,10 +74,10 @@ async def update_student(data: CreateBakalariStudent) -> Optional[BakalariStuden
         UPDATE bakalari_rewards.students SET
             name = :name,
             wallet = :wallet,
-            withdraw_link = :withdraw_link,
             bakalari_url = :bakalari_url,
             bakalari_username = :bakalari_username,
             bakalari_password = :bakalari_password,
+            ln_address = :ln_address,
             reward_grade_1 = :reward_grade_1,
             reward_grade_2 = :reward_grade_2,
             reward_grade_3 = :reward_grade_3,
@@ -99,14 +92,7 @@ async def update_student(data: CreateBakalariStudent) -> Optional[BakalariStuden
             check_period = :check_period,
             last_check = :last_check,
             reward_unit = :reward_unit,
-            email = :email,
-            payout_method = :payout_method,
             czk_deficit = :czk_deficit,
-            smtp_host = :smtp_host,
-            smtp_user = :smtp_user,
-            smtp_pass = :smtp_pass,
-            smtp_port = :smtp_port,
-            lnbits_withdraw_key = :lnbits_withdraw_key,
             backtest_mode = :backtest_mode
         WHERE id = :id
         """,
@@ -114,10 +100,10 @@ async def update_student(data: CreateBakalariStudent) -> Optional[BakalariStuden
             "id": data.id,
             "name": data.name,
             "wallet": data.wallet,
-            "withdraw_link": data.withdraw_link,
             "bakalari_url": data.bakalari_url,
             "bakalari_username": data.bakalari_username,
-            "bakalari_password": data.bakalari_password,
+            "bakalari_password": encrypt_password(data.bakalari_password),
+            "ln_address": data.ln_address,
             "reward_grade_1": data.reward_grade_1,
             "reward_grade_2": data.reward_grade_2,
             "reward_grade_3": data.reward_grade_3,
@@ -132,14 +118,7 @@ async def update_student(data: CreateBakalariStudent) -> Optional[BakalariStuden
             "check_period": data.check_period,
             "last_check": data.last_check,
             "reward_unit": data.reward_unit,
-            "email": data.email,
-            "payout_method": data.payout_method,
             "czk_deficit": data.czk_deficit,
-            "smtp_host": data.smtp_host,
-            "smtp_user": data.smtp_user,
-            "smtp_pass": data.smtp_pass,
-            "smtp_port": data.smtp_port,
-            "lnbits_withdraw_key": data.lnbits_withdraw_key,
             "backtest_mode": data.backtest_mode,
         },
     )
@@ -169,7 +148,6 @@ async def update_student_czk_deficit(student_id: str, czk_deficit: float) -> Non
 
 
 # ---- Processed marks (deduplication) ----
-
 async def get_processed_mark(student_id: str, mark_hash: str) -> bool:
     """Vrati True pokud jiz byla tato znamka zpracovana."""
     row = await db.fetchone(
