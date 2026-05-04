@@ -152,7 +152,6 @@ async def process_student_grades(student) -> None:
             logger.debug(f"Student {student.name}: prilis brzy na dalsi kontrolu, preskakuji")
             return
 
-        # Desifrovat heslo pred pouzitim (podporuje Fernet i plaintext rezim)
         plaintext_password = decrypt_bakalari_password(student.bakalari_password)
 
         grades_data = await fetch_bakalari_grades(
@@ -161,14 +160,12 @@ async def process_student_grades(student) -> None:
             plaintext_password,
         )
 
-        # Parse grades from Subjects structure (Bakalari API returns Subjects -> Marks)
         subjects = grades_data.get("Subjects", grades_data.get("Marks", []))
         marks = []
         for subject in subjects:
             subject_name = subject.get("Caption") or subject.get("Name") or subject.get("SubjectName") or "Neznamy predmet"
             subject_marks = subject.get("Marks", [])
             for mark in subject_marks:
-                # Add subject name to mark for later use
                 mark["Subject"] = subject_name
                 marks.append(mark)
 
@@ -183,7 +180,6 @@ async def process_student_grades(student) -> None:
             except Exception:
                 pass
 
-        # Backtest režim: smazat záznamy od nového last_check
         backtest_mode = getattr(student, "backtest_mode", False)
         if backtest_mode and last_check_dt:
             await delete_processed_marks_from(student.id, last_check_dt.strftime("%Y-%m-%dT%H:%M:%S"))
@@ -216,13 +212,11 @@ async def process_student_grades(student) -> None:
             await update_student_last_check(student.id, now_iso)
             return
 
-        # === NOVÁ LOGIKA: AGREGACE ODMĚN ===
         reward_unit = getattr(student, "reward_unit", "sat")
         czk_per_btc = None
         if reward_unit == "czk":
             czk_per_btc = await get_btc_czk_rate()
 
-        # Projdeme všechny známky a spočítáme celkovou odměnu
         total_reward_sats = 0
         grade_counts = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0}
         processed_marks = []
@@ -268,13 +262,19 @@ async def process_student_grades(student) -> None:
 
         payment_sent = False
         if total_reward_sats > 0:
-            payout_method = getattr(student, "payout_method", "email")
-            if payout_method == "lnbits" and student.withdraw_link:
-                payment_sent = await send_reward_via_withdraw_link(student.withdraw_link, total_reward_sats, memo)
-            elif payout_method == "email" and student.email and student.lnbits_withdraw_key:
-                payment_sent = await send_reward_via_email(student, total_reward_sats, memo)
+            ln_target = getattr(student, "ln_address", None) or getattr(student, "withdraw_link", None)
+
+            if ln_target:
+                payment_sent = await send_reward_via_withdraw_link(
+                    ln_target,
+                    total_reward_sats,
+                    memo,
+                )
             else:
-                logger.warning(f"Student {student.name}: neni nastavena metoda vyplaty, preskakuji odmenu")
+                logger.warning(
+                    f"Student {student.name}: neni nastavena LN penezenka "
+                    f"(ln_address / withdraw_link), preskakuji odmenu"
+                )
 
         for mhash in processed_marks:
             await save_processed_mark(student.id, mhash)
@@ -292,22 +292,12 @@ async def process_student_grades(student) -> None:
 
 
 async def send_reward_via_withdraw_link(withdraw_link: str, amount_sats: int, memo: str) -> bool:
-    """Posle odmenu primo na LN adresu/LNURL studenta."""
+    """Posle odmenu primo na LN adresu nebo LNURL studenta."""
     try:
         logger.info(f"send_reward_via_withdraw_link: {withdraw_link}, {amount_sats} sat - {memo}")
         return False
     except Exception as e:
-        logger.warning(f"Chyba pri posilani odmeny pres withdraw_link: {e}")
-        return False
-
-
-async def send_reward_via_email(student, amount_sats: int, memo: str) -> bool:
-    """Vytvori LNURL-withdraw voucher a odesle email s QR kodem."""
-    try:
-        logger.info(f"send_reward_via_email: {student.email}, {amount_sats} sat - {memo}")
-        return False
-    except Exception as e:
-        logger.warning(f"Chyba pri posilani odmeny emailem: {e}")
+        logger.warning(f"Chyba pri posilani odmeny pres LN adresu/LNURL: {e}")
         return False
 
 
