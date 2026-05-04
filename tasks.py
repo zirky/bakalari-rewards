@@ -11,6 +11,7 @@ from .crud import (
     save_processed_mark,
     delete_processed_marks_from,
 )
+from .models import decrypt_password
 
 GRADE_REWARD_MAP = {
     1: "reward_grade_1",
@@ -19,7 +20,6 @@ GRADE_REWARD_MAP = {
     4: "reward_grade_4",
     5: "reward_grade_5",
 }
-
 GRADE_REWARD_CZK_MAP = {
     1: "reward_grade_1_czk",
     2: "reward_grade_2_czk",
@@ -127,6 +127,64 @@ def should_check_student(student) -> bool:
     return (now - lc) >= delta
 
 
+async def send_reward_via_ln_address(ln_address: str, amount_sats: int, memo: str, wallet_id: str) -> bool:
+    """Posle odmenu primo na Lightning adresu studenta pres LNURL-pay flow."""
+    try:
+        # Rozlozit ln_address na user@domain
+        if "@" not in ln_address:
+            logger.warning(f"Neplatna Lightning adresa: {ln_address}")
+            return False
+        user, domain = ln_address.split("@", 1)
+        lnurl_url = f"https://{domain}/.well-known/lnurlp/{user}"
+        async with httpx.AsyncClient(timeout=15) as client:
+            # Krok 1: ziskat LNURL-pay endpoint
+            r1 = await client.get(lnurl_url)
+            r1.raise_for_status()
+            lnurl_data = r1.json()
+            if lnurl_data.get("status") == "ERROR":
+                logger.warning(f"LNURL-pay chyba pro {ln_address}: {lnurl_data.get('reason')}")
+                return False
+            callback = lnurl_data.get("callback")
+            min_sendable = lnurl_data.get("minSendable", 1000)  # millisats
+            max_sendable = lnurl_data.get("maxSendable", 1_000_000_000)  # millisats
+            amount_msats = amount_sats * 1000
+            if amount_msats < min_sendable or amount_msats > max_sendable:
+                logger.warning(
+                    f"Castka {amount_sats} sat je mimo rozsah LNURL-pay pro {ln_address} "
+                    f"(min: {min_sendable // 1000} sat, max: {max_sendable // 1000} sat)"
+                )
+                return False
+            # Krok 2: ziskat invoice
+            r2 = await client.get(callback, params={"amount": amount_msats, "comment": memo[:144]})
+            r2.raise_for_status()
+            invoice_data = r2.json()
+            if invoice_data.get("status") == "ERROR":
+                logger.warning(f"Invoice chyba pro {ln_address}: {invoice_data.get('reason')}")
+                return False
+            payment_request = invoice_data.get("pr")
+            if not payment_request:
+                logger.warning(f"Chybi payment_request v odpovedi pro {ln_address}")
+                return False
+            # Krok 3: zaplatit invoice pres LNbits interni API
+            from lnbits.core.crud import get_wallet
+            from lnbits.core.services import pay_invoice
+            wallet = await get_wallet(wallet_id)
+            if not wallet:
+                logger.warning(f"Wallet {wallet_id} nenalezena")
+                return False
+            await pay_invoice(
+                wallet_id=wallet_id,
+                payment_request=payment_request,
+                max_sat=amount_sats + 10,  # mala rezerva na poplatky
+                extra={"tag": "bakalari_rewards", "memo": memo},
+            )
+            logger.info(f"Odmena {amount_sats} sat odeslana na {ln_address}: {memo}")
+            return True
+    except Exception as e:
+        logger.warning(f"Chyba pri posilani odmeny na LN adresu {ln_address}: {e}")
+        return False
+
+
 async def process_student_grades(student) -> None:
     """Zkontroluje nove znamky studenta a posle odmeny."""
     try:
@@ -134,12 +192,14 @@ async def process_student_grades(student) -> None:
             logger.debug(f"Student {student.name}: prilis brzy na dalsi kontrolu, preskakuji")
             return
 
+        # Desifrovani hesla (Fernet pokud je nastaven klic, jinak plaintext)
+        password = decrypt_password(student.bakalari_password)
+
         grades_data = await fetch_bakalari_grades(
             student.bakalari_url,
             student.bakalari_username,
-            student.bakalari_password,
+            password,
         )
-
         # Parse grades from Subjects structure (Bakalari API returns Subjects -> Marks)
         subjects = grades_data.get("Subjects", grades_data.get("Marks", []))
         marks = []
@@ -147,10 +207,8 @@ async def process_student_grades(student) -> None:
             subject_name = subject.get("Caption") or subject.get("Name") or subject.get("SubjectName") or "Neznamy predmet"
             subject_marks = subject.get("Marks", [])
             for mark in subject_marks:
-                # Add subject name to mark for later use
                 mark["Subject"] = subject_name
                 marks.append(mark)
-
         logger.info(f"Student {student.name}: API vratilo {len(marks)} znamek celkem")
 
         last_check_dt = None
@@ -162,11 +220,11 @@ async def process_student_grades(student) -> None:
             except Exception:
                 pass
 
-        # Backtest režim: smazat záznamy od nového last_check
+        # Backtest rezim: smazat zaznamy od noveho last_check
         backtest_mode = getattr(student, "backtest_mode", False)
         if backtest_mode and last_check_dt:
             await delete_processed_marks_from(student.id, last_check_dt.strftime("%Y-%m-%dT%H:%M:%S"))
-            logger.info(f"Student {student.name}: backtest režim - smazány záznamy od {last_check_dt}")
+            logger.info(f"Student {student.name}: backtest rezim - smazany zaznamy od {last_check_dt}")
 
         new_marks = []
         skipped_old = 0
@@ -186,7 +244,6 @@ async def process_student_grades(student) -> None:
                 skipped_dedup += 1
                 continue
             new_marks.append((mark, mhash))
-
         logger.info(f"Student {student.name}: {len(new_marks)} novych, {skipped_old} starych, {skipped_dedup} duplikatu")
 
         if not new_marks:
@@ -195,13 +252,11 @@ async def process_student_grades(student) -> None:
             await update_student_last_check(student.id, now_iso)
             return
 
-        # === NOVÁ LOGIKA: AGREGACE ODMĚN ===
         reward_unit = getattr(student, "reward_unit", "sat")
         czk_per_btc = None
         if reward_unit == "czk":
             czk_per_btc = await get_btc_czk_rate()
 
-        # Projdeme všechny známky a spočítáme celkovou odměnu
         total_reward_sats = 0
         grade_counts = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0}
         processed_marks = []
@@ -211,12 +266,10 @@ async def process_student_grades(student) -> None:
             grade = None
             if grade_str and grade_str[0].isdigit():
                 grade = int(grade_str[0])
-
             if grade is None or grade not in GRADE_REWARD_MAP:
                 logger.debug(f"Student {student.name}: znamka '{grade_str}' neni ocenitelna, preskakuji")
                 processed_marks.append(mhash)
                 continue
-
             if reward_unit == "czk":
                 czk_field = GRADE_REWARD_CZK_MAP[grade]
                 czk_amount = getattr(student, czk_field, 0) or 0
@@ -233,7 +286,6 @@ async def process_student_grades(student) -> None:
             else:
                 sat_field = GRADE_REWARD_MAP[grade]
                 reward_sats = getattr(student, sat_field, 0) or 0
-
             total_reward_sats += reward_sats
             grade_counts[grade] += 1
             processed_marks.append(mhash)
@@ -242,52 +294,29 @@ async def process_student_grades(student) -> None:
         period = getattr(student, "check_period", "weekly")
         period_text = "mesic" if period == "monthly" else "tyden"
         memo = f"Odmena za {period_text}: {grade_summary} (celkem {len(processed_marks)} znamek)"
-
         logger.info(f"Student {student.name}: celkova odmena za obdobi: {total_reward_sats} sat ({grade_summary})")
 
         payment_sent = False
         if total_reward_sats > 0:
-            payout_method = getattr(student, "payout_method", "email")
-            if payout_method == "lnbits" and student.withdraw_link:
-                payment_sent = await send_reward_via_withdraw_link(student.withdraw_link, total_reward_sats, memo)
-            elif payout_method == "email" and student.email and student.lnbits_withdraw_key:
-                payment_sent = await send_reward_via_email(student, total_reward_sats, memo)
+            ln_address = getattr(student, "ln_address", None)
+            if ln_address:
+                payment_sent = await send_reward_via_ln_address(
+                    ln_address, total_reward_sats, memo, student.wallet
+                )
             else:
-                logger.warning(f"Student {student.name}: neni nastavena metoda vyplaty, preskakuji odmenu")
+                logger.warning(f"Student {student.name}: neni nastavena Lightning adresa, preskakuji odmenu")
 
         for mhash in processed_marks:
             await save_processed_mark(student.id, mhash)
-
         now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
         await update_student_last_check(student.id, now_iso)
 
         if payment_sent:
-            logger.info(f"Student {student.name}: zpracovano {len(processed_marks)} znamek, odeslana 1 platba ({total_reward_sats} sat)")
+            logger.info(f"Student {student.name}: zpracovano {len(processed_marks)} znamek, odeslana platba ({total_reward_sats} sat) na {ln_address}")
         else:
             logger.info(f"Student {student.name}: zpracovano {len(processed_marks)} znamek, platba nebyla odeslana")
-
     except Exception as exc:
         logger.warning(f"Chyba pri zpracovani studenta {student.name}: {exc}")
-
-
-async def send_reward_via_withdraw_link(withdraw_link: str, amount_sats: int, memo: str) -> bool:
-    """Posle odmenu primo na LN adresu/LNURL studenta."""
-    try:
-        logger.info(f"send_reward_via_withdraw_link: {withdraw_link}, {amount_sats} sat - {memo}")
-        return False
-    except Exception as e:
-        logger.warning(f"Chyba pri posilani odmeny pres withdraw_link: {e}")
-        return False
-
-
-async def send_reward_via_email(student, amount_sats: int, memo: str) -> bool:
-    """Vytvori LNURL-withdraw voucher a odesle email s QR kodem."""
-    try:
-        logger.info(f"send_reward_via_email: {student.email}, {amount_sats} sat - {memo}")
-        return False
-    except Exception as e:
-        logger.warning(f"Chyba pri posilani odmeny emailem: {e}")
-        return False
 
 
 async def bakalari_rewards_task():
