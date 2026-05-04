@@ -102,3 +102,11 @@ async def m008_add_backtest_mode(db):
     Pridá sloupec backtest_mode pro bezpečné testování historických dat.
     """
     await _safe_alter(db, "ALTER TABLE bakalari_rewards.students ADD COLUMN backtest_mode INTEGER DEFAULT 0")
+
+
+async def m009_add_ln_address(db):
+    """
+    Prida sloupec ln_address pro Lightning adresu zaka.
+    Nahrazuje email/QR payout metodu.
+    """
+    await _safe_alter(db, "ALTER TABLE bakalari_rewards.students ADD COLUMN ln_address TEXT DEFAULT NULL")
