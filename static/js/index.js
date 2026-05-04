@@ -69,7 +69,7 @@ window.app = Vue.createApp({
         name: student.name,
         bakalari_url: student.bakalari_url,
         bakalari_username: student.bakalari_username,
-        bakalari_password: student.bakalari_password || '',
+        bakalari_password: '',
         ln_address: student.ln_address || '',
         reward_unit: student.reward_unit || 'sat',
         reward_grade_1: student.reward_grade_1,
@@ -103,11 +103,7 @@ window.app = Vue.createApp({
       LNbits.api
         .request('POST', '/bakalari_rewards/api/v1/students', this.g.user.wallets[0].adminkey, sentData)
         .then(function (response) {
-          // Zachovat citliva pole ktera API nevraci
-          var merged = Object.assign({}, response.data, {
-            bakalari_password: sentData.bakalari_password
-          })
-          self.students.push(merged)
+          self.students.push(response.data)
           self.formDialog.show = false
           self.resetForm()
         })
@@ -128,11 +124,7 @@ window.app = Vue.createApp({
         .then(function (response) {
           var idx = self.students.findIndex(function (s) { return s.id === sentData.id })
           if (idx !== -1) {
-            // Zachovat citliva pole ktera API nevraci
-            var merged = Object.assign({}, response.data, {
-              bakalari_password: sentData.bakalari_password
-            })
-            self.students.splice(idx, 1, merged)
+            self.students.splice(idx, 1, response.data)
           }
           self.formDialog.show = false
           self.resetForm()
@@ -177,11 +169,11 @@ window.app = Vue.createApp({
         reward_grade_3: 50,
         reward_grade_4: 25,
         reward_grade_5: 0,
-        reward_grade_1_czk: 0,
-        reward_grade_2_czk: 0,
-        reward_grade_3_czk: 0,
-        reward_grade_4_czk: 0,
-        reward_grade_5_czk: 0,
+        reward_grade_1_czk: 50,
+        reward_grade_2_czk: 10,
+        reward_grade_3_czk: -10,
+        reward_grade_4_czk: -50,
+        reward_grade_5_czk: -100,
         check_period: 'weekly',
         last_check: null,
         czk_deficit: 0,
