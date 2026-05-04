@@ -29,6 +29,9 @@ GRADE_REWARD_CZK_MAP = {
     5: "reward_grade_5_czk",
 }
 
+LNBITS_API_URL = os.environ.get("LNBITS_API_URL", "http://localhost:5000")
+LNBITS_API_KEY = os.environ.get("LNBITS_API_KEY", "d9929f88c31a45c088f9de34acce0565")
+
 
 def mark_hash(student_id: str, mark: dict) -> str:
     """Vytvori unikatni hash pro kazdou znamku pro deduplication."""
@@ -292,12 +295,62 @@ async def process_student_grades(student) -> None:
 
 
 async def send_reward_via_withdraw_link(withdraw_link: str, amount_sats: int, memo: str) -> bool:
-    """Posle odmenu primo na LN adresu nebo LNURL studenta."""
+    """
+    Docasna testovaci implementace:
+    - vytvori invoice na vlastni LNbits wallete
+    - hned ho z te same wallet zaplati pres API
+    NEpouziva zatim skutecnou LN adresu, jen testuje, ze send pipeline funguje.
+    """
     try:
         logger.info(f"send_reward_via_withdraw_link: {withdraw_link}, {amount_sats} sat - {memo}")
-        return False
+
+        async with httpx.AsyncClient(timeout=30) as client:
+            create_body = {
+                "out": False,
+                "amount": amount_sats,
+                "memo": memo,
+            }
+            r_inv = await client.post(
+                f"{LNBITS_API_URL.rstrip('/')}/api/v1/payments",
+                headers={
+                    "X-Api-Key": LNBITS_API_KEY,
+                    "Content-Type": "application/json",
+                },
+                json=create_body,
+            )
+            r_inv.raise_for_status()
+            inv_data = r_inv.json()
+
+            bolt11 = inv_data.get("payment_request") or inv_data.get("bolt11")
+            if not bolt11:
+                logger.warning(f"LNbits invoice nema payment_request/bolt11: {inv_data}")
+                return False
+
+            pay_body = {
+                "out": True,
+                "bolt11": bolt11,
+            }
+            r_pay = await client.post(
+                f"{LNBITS_API_URL.rstrip('/')}/api/v1/payments",
+                headers={
+                    "X-Api-Key": LNBITS_API_KEY,
+                    "Content-Type": "application/json",
+                },
+                json=pay_body,
+            )
+            r_pay.raise_for_status()
+            pay_data = r_pay.json()
+
+            status = pay_data.get("status") or pay_data.get("paid")
+            if status in ("success", True):
+                logger.info(f"LNbits platba uspesna: {amount_sats} sat, memo='{memo}'")
+                return True
+
+            logger.warning(f"LNbits platba neuspesna, odpoved: {pay_data}")
+            return False
+
     except Exception as e:
-        logger.warning(f"Chyba pri posilani odmeny pres LN adresu/LNURL: {e}")
+        logger.warning(f"Chyba pri posilani odmeny pres LNbits API: {e}")
         return False
 
 
