@@ -1,6 +1,7 @@
 import asyncio
 import hashlib
 import httpx
+import os
 from datetime import datetime, timedelta, timezone
 from loguru import logger
 
@@ -33,6 +34,23 @@ def mark_hash(student_id: str, mark: dict) -> str:
     """Vytvori unikatni hash pro kazdou znamku pro deduplication."""
     raw = f"{student_id}:{mark.get('Id', '')}:{mark.get('MarkDate', '')}:{mark.get('MarkText', '')}:{mark.get('Subject', '')}"
     return hashlib.sha256(raw.encode()).hexdigest()[:32]
+
+
+def decrypt_bakalari_password(encrypted: str) -> str:
+    """Desifruje bakalari_password pokud je aktivni BAKALARI_FERNET_KEY, jinak vraci plaintext."""
+    key = os.environ.get("BAKALARI_FERNET_KEY")
+    if not key or not encrypted:
+        return encrypted
+    try:
+        from cryptography.fernet import Fernet, InvalidToken
+        f = Fernet(key.encode())
+        return f.decrypt(encrypted.encode()).decode()
+    except InvalidToken:
+        logger.warning("decrypt_bakalari_password: InvalidToken - heslo neni zasifrovane nebo klic je spatny, pouzivam plaintext")
+        return encrypted
+    except Exception as e:
+        logger.warning(f"decrypt_bakalari_password: chyba desifrovani ({e}), pouzivam plaintext")
+        return encrypted
 
 
 async def fetch_bakalari_grades(bakalari_url: str, username: str, password: str):
@@ -134,10 +152,13 @@ async def process_student_grades(student) -> None:
             logger.debug(f"Student {student.name}: prilis brzy na dalsi kontrolu, preskakuji")
             return
 
+        # Desifrovat heslo pred pouzitim (podporuje Fernet i plaintext rezim)
+        plaintext_password = decrypt_bakalari_password(student.bakalari_password)
+
         grades_data = await fetch_bakalari_grades(
             student.bakalari_url,
             student.bakalari_username,
-            student.bakalari_password,
+            plaintext_password,
         )
 
         # Parse grades from Subjects structure (Bakalari API returns Subjects -> Marks)
