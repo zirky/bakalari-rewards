@@ -1,5 +1,4 @@
 // static/js/index.js - LNbits 1.5.3 format
-
 window.app = Vue.createApp({
   mixins: [windowMixin],
   delimiters: ['${', '}'],
@@ -15,6 +14,7 @@ window.app = Vue.createApp({
           bakalari_url: '',
           bakalari_username: '',
           bakalari_password: '',
+          ln_address: '',
           reward_unit: 'sat',
           reward_grade_1: 100,
           reward_grade_2: 75,
@@ -28,14 +28,6 @@ window.app = Vue.createApp({
           reward_grade_5_czk: 0,
           check_period: 'weekly',
           last_check: null,
-          email: '',
-          payout_method: 'email',
-          smtp_host: '',
-          smtp_user: '',
-          smtp_pass: '',
-          smtp_port: 465,
-          lnbits_withdraw_key: '',
-          withdraw_link: null,
           czk_deficit: 0,
           backtest_mode: false
         }
@@ -44,6 +36,7 @@ window.app = Vue.createApp({
         columns: [
           {name: 'name', align: 'left', label: 'Student', field: 'name'},
           {name: 'bakalari_url', align: 'left', label: 'URL skoly', field: 'bakalari_url'},
+          {name: 'ln_address', align: 'left', label: 'LN adresa', field: 'ln_address'},
           {name: 'check_period', align: 'left', label: 'Frekvence', field: 'check_period'},
           {name: 'last_check', align: 'left', label: 'Posledni kontrola', field: 'last_check'},
           {name: 'reward_sats', align: 'left', label: 'Odmeny', field: 'reward_sats'},
@@ -77,6 +70,7 @@ window.app = Vue.createApp({
         bakalari_url: student.bakalari_url,
         bakalari_username: student.bakalari_username,
         bakalari_password: student.bakalari_password || '',
+        ln_address: student.ln_address || '',
         reward_unit: student.reward_unit || 'sat',
         reward_grade_1: student.reward_grade_1,
         reward_grade_2: student.reward_grade_2,
@@ -90,14 +84,6 @@ window.app = Vue.createApp({
         reward_grade_5_czk: student.reward_grade_5_czk || 0,
         check_period: student.check_period || 'weekly',
         last_check: student.last_check || null,
-        email: student.email || '',
-        payout_method: student.payout_method || 'email',
-        smtp_host: student.smtp_host || '',
-        smtp_user: student.smtp_user || '',
-        smtp_pass: student.smtp_pass || '',
-        smtp_port: student.smtp_port || 465,
-        lnbits_withdraw_key: student.lnbits_withdraw_key || '',
-        withdraw_link: student.withdraw_link || null,
         czk_deficit: student.czk_deficit || 0,
         backtest_mode: student.backtest_mode || false
       }
@@ -119,10 +105,7 @@ window.app = Vue.createApp({
         .then(function (response) {
           // Zachovat citliva pole ktera API nevraci
           var merged = Object.assign({}, response.data, {
-            bakalari_password: sentData.bakalari_password,
-            smtp_pass: sentData.smtp_pass,
-            lnbits_withdraw_key: sentData.lnbits_withdraw_key,
-            withdraw_link: sentData.withdraw_link
+            bakalari_password: sentData.bakalari_password
           })
           self.students.push(merged)
           self.formDialog.show = false
@@ -147,10 +130,7 @@ window.app = Vue.createApp({
           if (idx !== -1) {
             // Zachovat citliva pole ktera API nevraci
             var merged = Object.assign({}, response.data, {
-              bakalari_password: sentData.bakalari_password,
-              smtp_pass: sentData.smtp_pass,
-              lnbits_withdraw_key: sentData.lnbits_withdraw_key,
-              withdraw_link: sentData.withdraw_link
+              bakalari_password: sentData.bakalari_password
             })
             self.students.splice(idx, 1, merged)
           }
@@ -190,6 +170,7 @@ window.app = Vue.createApp({
         bakalari_url: '',
         bakalari_username: '',
         bakalari_password: '',
+        ln_address: '',
         reward_unit: 'sat',
         reward_grade_1: 100,
         reward_grade_2: 75,
@@ -203,14 +184,6 @@ window.app = Vue.createApp({
         reward_grade_5_czk: 0,
         check_period: 'weekly',
         last_check: null,
-        email: '',
-        payout_method: 'email',
-        smtp_host: '',
-        smtp_user: '',
-        smtp_pass: '',
-        smtp_port: 465,
-        lnbits_withdraw_key: '',
-        withdraw_link: null,
         czk_deficit: 0,
         backtest_mode: false
       }
