@@ -1,16 +1,17 @@
 import asyncio
 import hashlib
-import httpx
 import os
 from datetime import datetime, timedelta, timezone
+
+import httpx
 from loguru import logger
 
 from .crud import (
+    delete_processed_marks_from,
     get_all_students,
-    update_student_last_check,
     get_processed_mark,
     save_processed_mark,
-    delete_processed_marks_from,
+    update_student_last_check,
 )
 
 GRADE_REWARD_MAP = {
@@ -29,13 +30,44 @@ GRADE_REWARD_CZK_MAP = {
     5: "reward_grade_5_czk",
 }
 
-LNBITS_API_URL = os.environ.get("LNBITS_API_URL", "http://localhost:5000")
-LNBITS_API_KEY = os.environ.get("LNBITS_API_KEY", "d9929f88c31a45c088f9de34acce0565")
+
+def get_env_bool(name: str, default: bool = False) -> bool:
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    return value.strip().lower() in ("1", "true", "yes", "on")
+
+
+def get_env_int(name: str, default: int) -> int:
+    value = os.environ.get(name)
+    if value is None or value == "":
+        return default
+    try:
+        return int(value)
+    except ValueError:
+        logger.warning(
+            f"Neplatna integer hodnota pro {name}='{value}', pouzivam default {default}"
+        )
+        return default
+
+
+def get_lnbits_config() -> dict:
+    return {
+        "api_url": os.environ.get("BAKALARI_REWARDS_LNBITS_API_URL", "http://localhost:5000"),
+        "api_key": os.environ.get("BAKALARI_REWARDS_LNBITS_API_KEY"),
+        "allow_insecure_tls": get_env_bool("BAKALARI_REWARDS_ALLOW_INSECURE_TLS", False),
+        "payout_enabled": get_env_bool("BAKALARI_REWARDS_PAYOUT_ENABLED", False),
+        "dry_run": get_env_bool("BAKALARI_REWARDS_DRY_RUN", True),
+        "max_sats_per_run": get_env_int("BAKALARI_REWARDS_MAX_SATS_PER_RUN", 100000),
+    }
 
 
 def mark_hash(student_id: str, mark: dict) -> str:
     """Vytvori unikatni hash pro kazdou znamku pro deduplication."""
-    raw = f"{student_id}:{mark.get('Id', '')}:{mark.get('MarkDate', '')}:{mark.get('MarkText', '')}:{mark.get('Subject', '')}"
+    raw = (
+        f"{student_id}:{mark.get('Id', '')}:{mark.get('MarkDate', '')}:"
+        f"{mark.get('MarkText', '')}:{mark.get('Subject', '')}"
+    )
     return hashlib.sha256(raw.encode()).hexdigest()[:32]
 
 
@@ -46,10 +78,13 @@ def decrypt_bakalari_password(encrypted: str) -> str:
         return encrypted
     try:
         from cryptography.fernet import Fernet, InvalidToken
+
         f = Fernet(key.encode())
         return f.decrypt(encrypted.encode()).decode()
     except InvalidToken:
-        logger.warning("decrypt_bakalari_password: InvalidToken - heslo neni zasifrovane nebo klic je spatny, pouzivam plaintext")
+        logger.warning(
+            "decrypt_bakalari_password: InvalidToken - heslo neni zasifrovane nebo klic je spatny, pouzivam plaintext"
+        )
         return encrypted
     except Exception as e:
         logger.warning(f"decrypt_bakalari_password: chyba desifrovani ({e}), pouzivam plaintext")
@@ -61,11 +96,13 @@ async def fetch_bakalari_grades(bakalari_url: str, username: str, password: str)
     base = bakalari_url.rstrip("/")
     prefixes = ["/webrodice", "/bakalari", "/bakaweb", "/dm", "/mobile", ""]
     last_error = "zadny prefix nevratil uspech"
+
     async with httpx.AsyncClient(timeout=30, verify=False) as client:
         for prefix in prefixes:
             try:
                 token_url = base + prefix + "/api/login"
                 logger.debug(f"Zkousim login: {token_url}")
+
                 resp = await client.post(
                     token_url,
                     data={
@@ -75,10 +112,13 @@ async def fetch_bakalari_grades(bakalari_url: str, username: str, password: str)
                         "password": password,
                     },
                 )
+
                 logger.debug(f"Login odpoved {token_url}: HTTP {resp.status_code}")
+
                 if resp.status_code == 404:
                     last_error = f"{token_url} => HTTP 404 (endpoint nenalezen)"
                     continue
+
                 if resp.status_code != 200:
                     body = resp.text[:500]
                     try:
@@ -89,12 +129,18 @@ async def fetch_bakalari_grades(bakalari_url: str, username: str, password: str)
                     raise ValueError(
                         f"Prihlaseni selhalo na {token_url}: HTTP {resp.status_code} - {err_desc}"
                     )
+
                 token = resp.json().get("access_token")
                 if not token:
-                    last_error = f"{token_url} => HTTP 200 ale chybi access_token. Odpoved: {resp.text[:200]}"
+                    last_error = (
+                        f"{token_url} => HTTP 200 ale chybi access_token. "
+                        f"Odpoved: {resp.text[:200]}"
+                    )
                     logger.debug(f"Login selhal: {last_error}")
                     continue
+
                 logger.info(f"Login uspesny pres: {token_url}")
+
                 grades_url = base + prefix + "/api/3/marks"
                 grades_resp = await client.get(
                     grades_url,
@@ -102,15 +148,24 @@ async def fetch_bakalari_grades(bakalari_url: str, username: str, password: str)
                 )
                 grades_resp.raise_for_status()
                 data = grades_resp.json()
-                logger.info(f"API /api/3/marks odpoved - klice: {list(data.keys())}, pocet Subjects: {len(data.get('Subjects', []))}")
+
+                logger.info(
+                    f"API /api/3/marks odpoved - klice: {list(data.keys())}, "
+                    f"pocet Subjects: {len(data.get('Subjects', []))}"
+                )
                 return data
+
             except ValueError:
                 raise
             except Exception as e:
                 last_error = f"{base + prefix}/api/login => vyjimka: {e}"
                 logger.debug(f"Login vyjimka: {last_error}")
                 continue
-    raise ValueError(f"Nepodarilo se pripojit k Bakalari. Zadny ze znamych prefixu nefungoval. Posledni chyba: {last_error}")
+
+    raise ValueError(
+        "Nepodarilo se pripojit k Bakalari. "
+        f"Zadny ze znamych prefixu nefungoval. Posledni chyba: {last_error}"
+    )
 
 
 async def get_btc_czk_rate() -> float:
@@ -137,12 +192,14 @@ def should_check_student(student) -> bool:
     """Rozhodne jestli je cas zkontrolovat znamky studenta podle check_period."""
     if student.last_check is None:
         return True
+
     now = datetime.now(timezone.utc)
     try:
         lc_str = student.last_check[:19]
         lc = datetime.strptime(lc_str, "%Y-%m-%dT%H:%M:%S").replace(tzinfo=timezone.utc)
     except Exception:
         return True
+
     period = getattr(student, "check_period", "weekly")
     delta = timedelta(days=30) if period == "monthly" else timedelta(days=7)
     return (now - lc) >= delta
@@ -165,8 +222,14 @@ async def process_student_grades(student) -> None:
 
         subjects = grades_data.get("Subjects", grades_data.get("Marks", []))
         marks = []
+
         for subject in subjects:
-            subject_name = subject.get("Caption") or subject.get("Name") or subject.get("SubjectName") or "Neznamy predmet"
+            subject_name = (
+                subject.get("Caption")
+                or subject.get("Name")
+                or subject.get("SubjectName")
+                or "Neznamy predmet"
+            )
             subject_marks = subject.get("Marks", [])
             for mark in subject_marks:
                 mark["Subject"] = subject_name
@@ -185,12 +248,15 @@ async def process_student_grades(student) -> None:
 
         backtest_mode = getattr(student, "backtest_mode", False)
         if backtest_mode and last_check_dt:
-            await delete_processed_marks_from(student.id, last_check_dt.strftime("%Y-%m-%dT%H:%M:%S"))
-            logger.info(f"Student {student.name}: backtest režim - smazány záznamy od {last_check_dt}")
+            await delete_processed_marks_from(
+                student.id, last_check_dt.strftime("%Y-%m-%dT%H:%M:%S")
+            )
+            logger.info(f"Student {student.name}: backtest rezim - smazany zaznamy od {last_check_dt}")
 
         new_marks = []
         skipped_old = 0
         skipped_dedup = 0
+
         for mark in marks:
             mark_date_str = mark.get("MarkDate") or mark.get("EditDate", "")
             if last_check_dt and mark_date_str:
@@ -201,13 +267,18 @@ async def process_student_grades(student) -> None:
                         continue
                 except Exception:
                     pass
+
             mhash = mark_hash(student.id, mark)
             if await get_processed_mark(student.id, mhash):
                 skipped_dedup += 1
                 continue
+
             new_marks.append((mark, mhash))
 
-        logger.info(f"Student {student.name}: {len(new_marks)} novych, {skipped_old} starych, {skipped_dedup} duplikatu")
+        logger.info(
+            f"Student {student.name}: {len(new_marks)} novych, "
+            f"{skipped_old} starych, {skipped_dedup} duplikatu"
+        )
 
         if not new_marks:
             logger.info(f"Student {student.name}: zadne nove znamky")
@@ -227,6 +298,7 @@ async def process_student_grades(student) -> None:
         for mark, mhash in new_marks:
             grade_str = str(mark.get("MarkText", "")).strip()
             grade = None
+
             if grade_str and grade_str[0].isdigit():
                 grade = int(grade_str[0])
 
@@ -240,13 +312,18 @@ async def process_student_grades(student) -> None:
                 czk_amount = getattr(student, czk_field, 0) or 0
                 current_deficit = getattr(student, "czk_deficit", 0) or 0
                 balance = czk_amount - current_deficit
+
                 if balance <= 0:
                     from .crud import update_student_czk_deficit
+
                     await update_student_czk_deficit(student.id, abs(balance))
                     processed_marks.append(mhash)
                     continue
+
                 reward_sats = czk_to_sats(balance, czk_per_btc)
+
                 from .crud import update_student_czk_deficit
+
                 await update_student_czk_deficit(student.id, 0)
             else:
                 sat_field = GRADE_REWARD_MAP[grade]
@@ -256,12 +333,17 @@ async def process_student_grades(student) -> None:
             grade_counts[grade] += 1
             processed_marks.append(mhash)
 
-        grade_summary = ", ".join([f"{count}x{grade}" for grade, count in grade_counts.items() if count > 0])
+        grade_summary = ", ".join(
+            [f"{count}x{grade}" for grade, count in grade_counts.items() if count > 0]
+        )
         period = getattr(student, "check_period", "weekly")
         period_text = "mesic" if period == "monthly" else "tyden"
         memo = f"Odmena za {period_text}: {grade_summary} (celkem {len(processed_marks)} znamek)"
 
-        logger.info(f"Student {student.name}: celkova odmena za obdobi: {total_reward_sats} sat ({grade_summary})")
+        logger.info(
+            f"Student {student.name}: celkova odmena za obdobi: "
+            f"{total_reward_sats} sat ({grade_summary})"
+        )
 
         payment_sent = False
         if total_reward_sats > 0:
@@ -286,9 +368,15 @@ async def process_student_grades(student) -> None:
         await update_student_last_check(student.id, now_iso)
 
         if payment_sent:
-            logger.info(f"Student {student.name}: zpracovano {len(processed_marks)} znamek, odeslana 1 platba ({total_reward_sats} sat)")
+            logger.info(
+                f"Student {student.name}: zpracovano {len(processed_marks)} znamek, "
+                f"odeslana 1 platba ({total_reward_sats} sat)"
+            )
         else:
-            logger.info(f"Student {student.name}: zpracovano {len(processed_marks)} znamek, platba nebyla odeslana")
+            logger.info(
+                f"Student {student.name}: zpracovano {len(processed_marks)} znamek, "
+                f"platba nebyla odeslana"
+            )
 
     except Exception as exc:
         logger.warning(f"Chyba pri zpracovani studenta {student.name}: {exc}")
@@ -296,24 +384,61 @@ async def process_student_grades(student) -> None:
 
 async def send_reward_via_withdraw_link(withdraw_link: str, amount_sats: int, memo: str) -> bool:
     """
-    Docasna testovaci implementace:
-    - vytvori invoice na vlastni LNbits wallete
-    - hned ho z te same wallet zaplati pres API
-    NEpouziva zatim skutecnou LN adresu, jen testuje, ze send pipeline funguje.
+    Lokalni testovaci implementace:
+    - konfigurace LNbits se cte z environment variables
+    - payout je defaultne vypnuty
+    - dry_run je defaultne zapnuty
+    - zatim se ignoruje withdraw_link a testuje se pouze LNbits send pipeline
     """
     try:
-        logger.info(f"send_reward_via_withdraw_link: {withdraw_link}, {amount_sats} sat - {memo}")
+        config = get_lnbits_config()
 
-        async with httpx.AsyncClient(timeout=30) as client:
+        logger.info(
+            f"send_reward_via_withdraw_link: target={withdraw_link}, amount={amount_sats} sat, memo={memo}"
+        )
+
+        if amount_sats <= 0:
+            logger.warning("LNbits payout preskocen: amount_sats musi byt > 0")
+            return False
+
+        if amount_sats > config["max_sats_per_run"]:
+            logger.warning(
+                f"LNbits payout zablokovan: {amount_sats} sat prekrocilo "
+                f"limit max_sats_per_run={config['max_sats_per_run']}"
+            )
+            return False
+
+        if not config["payout_enabled"]:
+            logger.warning(
+                "LNbits payout je vypnuty (BAKALARI_REWARDS_PAYOUT_ENABLED=false), "
+                "platbu neposilam"
+            )
+            return False
+
+        if config["dry_run"]:
+            logger.info(
+                f"DRY RUN: simulace LNbits platby {amount_sats} sat na target '{withdraw_link}' "
+                f"s memem '{memo}'"
+            )
+            return True
+
+        if not config["api_key"]:
+            logger.warning("LNbits payout nelze provest: chybi BAKALARI_REWARDS_LNBITS_API_KEY")
+            return False
+
+        async with httpx.AsyncClient(
+            timeout=30,
+            verify=not config["allow_insecure_tls"],
+        ) as client:
             create_body = {
                 "out": False,
                 "amount": amount_sats,
                 "memo": memo,
             }
             r_inv = await client.post(
-                f"{LNBITS_API_URL.rstrip('/')}/api/v1/payments",
+                f"{config['api_url'].rstrip('/')}/api/v1/payments",
                 headers={
-                    "X-Api-Key": LNBITS_API_KEY,
+                    "X-Api-Key": config["api_key"],
                     "Content-Type": "application/json",
                 },
                 json=create_body,
@@ -331,9 +456,9 @@ async def send_reward_via_withdraw_link(withdraw_link: str, amount_sats: int, me
                 "bolt11": bolt11,
             }
             r_pay = await client.post(
-                f"{LNBITS_API_URL.rstrip('/')}/api/v1/payments",
+                f"{config['api_url'].rstrip('/')}/api/v1/payments",
                 headers={
-                    "X-Api-Key": LNBITS_API_KEY,
+                    "X-Api-Key": config["api_key"],
                     "Content-Type": "application/json",
                 },
                 json=pay_body,
@@ -357,12 +482,15 @@ async def send_reward_via_withdraw_link(withdraw_link: str, amount_sats: int, me
 async def bakalari_rewards_task():
     """Periodicky kontroluje znamky vsech studentu a posila odmeny."""
     logger.info("Bakalari Rewards task started.")
+
     while True:
         try:
             students = await get_all_students()
             logger.info(f"Kontroluji znamky pro {len(students)} studentu")
+
             for student in students:
                 await process_student_grades(student)
+
             await asyncio.sleep(60)
         except asyncio.CancelledError:
             logger.info("Bakalari Rewards task cancelled.")
