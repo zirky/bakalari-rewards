@@ -9,6 +9,21 @@
         </q-card-section>
       </q-card>
 
+      <q-banner
+        v-if="hasBacktestStudents"
+        inline-actions
+        rounded
+        class="bg-orange-2 text-deep-orange-10"
+      >
+        <template v-slot:avatar>
+          <q-icon name="warning" color="deep-orange-8" />
+        </template>
+        <strong>Backtest režim je aktivní.</strong>
+        <span class="q-ml-sm">
+          Může dojít ke znovuzpracování a znovuproplacení historických známek.
+        </span>
+      </q-banner>
+
       <q-card>
         <q-card-section>
           <div class="row items-center no-wrap q-mb-md">
@@ -16,7 +31,7 @@
               <h5 class="text-subtitle1 q-my-none">Seznam žáků</h5>
             </div>
             <div class="col-auto">
-              <q-btn unelevated color="primary" @click="formDialog.show = true" label="Přidat žáka" />
+              <q-btn unelevated color="primary" @click="openAddDialog" label="Přidat žáka" />
             </div>
           </div>
           <q-table
@@ -27,8 +42,23 @@
             row-key="id"
             no-data-label="Zatím žádní žáci"
           >
+            <template v-slot:body-cell-name="props">
+              <q-td :props="props">
+                <div class="row items-center no-wrap">
+                  <span>{{ props.row.name }}</span>
+                  <q-badge
+                    v-if="props.row.backtest_mode"
+                    color="red"
+                    text-color="white"
+                    class="q-ml-sm"
+                    label="BACKTEST"
+                  />
+                </div>
+              </q-td>
+            </template>
+
             <template v-slot:body-cell-reward_sats="props">
-              <q-td>
+              <q-td :props="props">
                 <span>1: {{ props.row.reward_grade_1 }} sat</span>
                 <span class="q-ml-sm">2: {{ props.row.reward_grade_2 }} sat</span>
                 <span class="q-ml-sm">3: {{ props.row.reward_grade_3 }} sat</span>
@@ -36,12 +66,15 @@
                 <span class="q-ml-sm">5: {{ props.row.reward_grade_5 }} sat</span>
               </q-td>
             </template>
+
             <template v-slot:body-cell-actions="props">
               <q-td auto-width>
-                          <q-btn flat dense color="primary" icon="edit" @click="openEditDialog(props.row)">
-                                        <q-tooltip>Upravit</q-tooltip>
-                                      </q-btn>
-                <q-btn flat dense color="negative" icon="delete" @click="deleteStudent(props.row.id)" />
+                <q-btn flat dense color="primary" icon="edit" @click="openEditDialog(props.row)">
+                  <q-tooltip>Upravit</q-tooltip>
+                </q-btn>
+                <q-btn flat dense color="negative" icon="delete" @click="deleteStudent(props.row.id)">
+                  <q-tooltip>Smazat</q-tooltip>
+                </q-btn>
               </q-td>
             </template>
           </q-table>
@@ -53,13 +86,18 @@
   <q-dialog v-model="formDialog.show" persistent>
     <q-card style="min-width: 550px; max-width: 90vw">
       <q-card-section class="row items-center">
-        <div class="text-h6">Přidat žáka</div>
+        <div class="text-h6">
+          {{ formDialog.editMode ? 'Upravit žáka' : 'Přidat žáka' }}
+        </div>
         <q-space />
         <q-btn icon="close" flat round dense @click="formDialog.show = false" />
       </q-card-section>
+
       <q-separator />
+
       <q-card-section style="max-height: 70vh" class="scroll">
         <q-input v-model="formDialog.data.name" label="Jméno žáka" filled class="q-mb-md" />
+
         <q-select
           v-model="formDialog.data.wallet"
           :options="g.user.wallets"
@@ -71,9 +109,32 @@
           filled
           class="q-mb-md"
         />
+
         <q-input v-model="formDialog.data.bakalari_url" label="URL Bakálářů" filled class="q-mb-md" />
         <q-input v-model="formDialog.data.bakalari_username" label="Přihlašovací jméno" filled class="q-mb-md" />
         <q-input v-model="formDialog.data.bakalari_password" label="Heslo" type="password" filled class="q-mb-md" />
+
+        <q-toggle
+          v-model="formDialog.data.backtest_mode"
+          color="warning"
+          checked-icon="warning"
+          unchecked-icon="schedule"
+          label="Backtest režim"
+          class="q-mb-sm"
+        />
+
+        <q-banner
+          v-if="formDialog.data.backtest_mode"
+          rounded
+          class="bg-red-1 text-red-10 q-mb-md"
+        >
+          <template v-slot:avatar>
+            <q-icon name="warning" color="red-8" />
+          </template>
+          <strong>Pozor:</strong>
+          Zapnutý backtest může vést ke znovuzpracování a znovuproplacení historických známek.
+        </q-banner>
+
         <div class="text-subtitle2 q-mb-sm">Odměna za známku (sats)</div>
         <div class="row q-gutter-sm">
           <q-input v-model.number="formDialog.data.reward_grade_1" label="Známka 1" type="number" filled style="width:100px" />
@@ -83,10 +144,17 @@
           <q-input v-model.number="formDialog.data.reward_grade_5" label="Známka 5" type="number" filled style="width:100px" />
         </div>
       </q-card-section>
+
       <q-separator />
+
       <q-card-actions align="right" class="q-pa-md">
         <q-btn flat label="Zrušit" @click="formDialog.show = false" />
-        <q-btn unelevated color="primary" label="Uložit žáka" @click="createStudent" />
+        <q-btn
+          unelevated
+          color="primary"
+          :label="formDialog.editMode ? 'Uložit změny' : 'Uložit žáka'"
+          @click="saveStudent"
+        />
       </q-card-actions>
     </q-card>
   </q-dialog>
