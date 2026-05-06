@@ -56,10 +56,9 @@ def get_lnbits_config() -> dict:
         "api_url": os.environ.get("BAKALARI_REWARDS_LNBITS_API_URL", "http://localhost:5000"),
         "api_key": os.environ.get("BAKALARI_REWARDS_LNBITS_API_KEY"),
         "allow_insecure_tls": get_env_bool("BAKALARI_REWARDS_ALLOW_INSECURE_TLS", False),
-        "payout_enabled": get_env_bool("BAKALARI_REWARDS_PAYOUT_ENABLED", False),
+        "payout_enabled": get_env_bool("BAKALARI_REWARDS_PAYOUT_ENABLED", True),
         "dry_run": get_env_bool("BAKALARI_REWARDS_DRY_RUN", True),
         "max_sats_per_run": get_env_int("BAKALARI_REWARDS_MAX_SATS_PER_RUN", 1000000),
-        "allow_backtest_payouts": get_env_bool("BAKALARI_REWARDS_ALLOW_BACKTEST_PAYOUTS", False),
     }
 
 
@@ -213,21 +212,6 @@ async def process_student_grades(student) -> None:
             logger.debug(f"Student {student.name}: prilis brzy na dalsi kontrolu, preskakuji")
             return
 
-        config = get_lnbits_config()
-        backtest_mode = getattr(student, "backtest_mode", False)
-
-        if backtest_mode:
-            logger.warning(
-                f"Student {student.name}: BACKTEST MODE JE AKTIVNI - muze dojit ke znovuzpracovani "
-                "a znovuproplaceni historickych znamek"
-            )
-
-            if config["payout_enabled"] and not config["allow_backtest_payouts"]:
-                logger.warning(
-                    f"Student {student.name}: payout v backtest rezimu je BLOKOVAN "
-                    "(BAKALARI_REWARDS_ALLOW_BACKTEST_PAYOUTS=false)"
-                )
-
         plaintext_password = decrypt_bakalari_password(student.bakalari_password)
 
         grades_data = await fetch_bakalari_grades(
@@ -261,6 +245,13 @@ async def process_student_grades(student) -> None:
                 logger.info(f"Student {student.name}: filtruji znamky novejsi nez {last_check_dt}")
             except Exception:
                 pass
+
+        backtest_mode = getattr(student, "backtest_mode", False)
+        if backtest_mode:
+            logger.warning(
+                f"Student {student.name}: BACKTEST MODE JE AKTIVNI - muze dojit ke "
+                "znovuzpracovani a znovuproplaceni historickych znamek"
+            )
 
         if backtest_mode and last_check_dt:
             await delete_processed_marks_from(
@@ -364,17 +355,13 @@ async def process_student_grades(student) -> None:
         if total_reward_sats > 0:
             ln_target = getattr(student, "ln_address", None) or getattr(student, "withdraw_link", None)
 
-            if backtest_mode and not config["allow_backtest_payouts"]:
-                logger.warning(
-                    f"Student {student.name}: payout preskocen, protoze backtest_mode=true "
-                    "a BAKALARI_REWARDS_ALLOW_BACKTEST_PAYOUTS=false"
-                )
-            elif ln_target:
+            if ln_target:
                 if backtest_mode:
                     logger.warning(
-                        f"Student {student.name}: PROBÍHÁ PAYOUT V BACKTEST REŽIMU "
+                        f"Student {student.name}: PROBIHA PAYOUT V BACKTEST REZIMU "
                         f"({total_reward_sats} sat)"
                     )
+
                 payment_sent = await send_reward_via_withdraw_link(
                     ln_target,
                     total_reward_sats,
@@ -411,7 +398,7 @@ async def send_reward_via_withdraw_link(withdraw_link: str, amount_sats: int, me
     """
     Lokalni testovaci implementace:
     - konfigurace LNbits se cte z environment variables
-    - payout je defaultne vypnuty
+    - payout je rizeny env konfiguraci
     - dry_run je defaultne zapnuty
     - zatim se ignoruje withdraw_link a testuje se pouze LNbits send pipeline
     """
