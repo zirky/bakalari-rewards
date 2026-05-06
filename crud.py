@@ -1,8 +1,9 @@
+from typing import List, Optional
+
 from lnbits.db import Database
 from lnbits.helpers import urlsafe_short_hash
-from typing import Optional, List
 
-from .models import CreateBakalariStudent, BakalariStudent, encrypt_password
+from .models import BakalariStudent, CreateBakalariStudent, encrypt_password
 
 db = Database("ext_bakalari_rewards")
 
@@ -47,9 +48,15 @@ async def get_student(student_id: str) -> Optional[BakalariStudent]:
 
 
 async def get_students(wallet_ids: List[str]) -> List[BakalariStudent]:
-    q = ",".join([f"'{w}'" for w in wallet_ids])
+    if not wallet_ids:
+        return []
+
+    placeholders = ",".join([f":wallet_{i}" for i in range(len(wallet_ids))])
+    params = {f"wallet_{i}": wallet_id for i, wallet_id in enumerate(wallet_ids)}
+
     return await db.fetchall(
-        f"SELECT * FROM bakalari_rewards.students WHERE wallet IN ({q})",
+        f"SELECT * FROM bakalari_rewards.students WHERE wallet IN ({placeholders})",
+        params,
         model=BakalariStudent,
     )
 
@@ -157,11 +164,14 @@ async def update_student_czk_deficit(student_id: str, czk_deficit: float) -> Non
     )
 
 
-# ---- Processed marks (deduplication) ----
 async def get_processed_mark(student_id: str, mark_hash: str) -> bool:
     """Vrati True pokud jiz byla tato znamka zpracovana."""
     row = await db.fetchone(
-        "SELECT 1 FROM bakalari_rewards.processed_marks WHERE student_id = :sid AND mark_hash = :mh",
+        """
+        SELECT 1
+        FROM bakalari_rewards.processed_marks
+        WHERE student_id = :sid AND mark_hash = :mh
+        """,
         {"sid": student_id, "mh": mark_hash},
     )
     return row is not None
