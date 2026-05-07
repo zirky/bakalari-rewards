@@ -1,7 +1,9 @@
 // static/js/index.js
-window.app = Vue.createApp({
+// LNbits extension router ocekava window[r.name] jako Vue Options object.
+// Nesmi pouzivat Vue.createApp() - extension nema vlastni #app element.
+window.PageBakalariRewards = {
+  name: 'PageBakalariRewards',
   mixins: [windowMixin],
-  delimiters: ['${', '}'],
   data: function () {
     return {
       students: [],
@@ -126,7 +128,7 @@ window.app = Vue.createApp({
         .then(function () {
           self.settingsDialog.show = false
           self.getSettings()
-          LNbits.utils.notifySuccess('Nastavení uloženo')
+          LNbits.utils.notifySuccess('Nastaveni ulozeno')
         })
         .catch(function (error) {
           LNbits.utils.notifyApiError(error)
@@ -166,12 +168,10 @@ window.app = Vue.createApp({
     },
     confirmBacktestEnable: function () {
       var isEnablingBacktest = false
-
       if (this.formDialog.editMode) {
         var originalStudent = this.students.find(function (student) {
           return student.id === this.formDialog.data.id
         }, this)
-
         isEnablingBacktest = !!(
           this.formDialog.data.backtest_mode &&
           originalStudent &&
@@ -180,20 +180,13 @@ window.app = Vue.createApp({
       } else {
         isEnablingBacktest = !!this.formDialog.data.backtest_mode
       }
-
-      if (!isEnablingBacktest) {
-        return true
-      }
-
+      if (!isEnablingBacktest) return true
       return window.confirm(
-        'Zapnout backtest režim?\n\nMůže dojít ke znovuzpracování a znovuproplacení historických známek.'
+        'Zapnout backtest rezim?\n\nMoze dojit ke znovuzpracovani a znovuproplaceni historickych znamek.'
       )
     },
     saveStudent: function () {
-      if (!this.confirmBacktestEnable()) {
-        return
-      }
-
+      if (!this.confirmBacktestEnable()) return
       if (this.formDialog.editMode) {
         this.updateStudent()
       } else {
@@ -226,9 +219,7 @@ window.app = Vue.createApp({
         )
         .then(function (response) {
           var idx = self.students.findIndex(function (s) { return s.id === sentData.id })
-          if (idx !== -1) {
-            self.students.splice(idx, 1, response.data)
-          }
+          if (idx !== -1) self.students.splice(idx, 1, response.data)
           self.formDialog.show = false
           self.resetForm()
         })
@@ -290,4 +281,4 @@ window.app = Vue.createApp({
       this.getSettings()
     }
   }
-})
+}
