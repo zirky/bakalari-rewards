@@ -1,5 +1,5 @@
-// static/js/index.js - LNbits 1.5.3 format
-export default {
+// static/js/index.js
+window.app = Vue.createApp({
   mixins: [windowMixin],
   delimiters: ['${', '}'],
   data: function () {
@@ -290,4 +290,4 @@ export default {
       this.getSettings()
     }
   }
-}
+})

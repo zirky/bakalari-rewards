@@ -2,7 +2,6 @@
   {
     "name": "PageBakalariRewards",
     "path": "/bakalari_rewards/",
-    "template": "/bakalari_rewards/static/templates/index.html",
-    "component": "/bakalari_rewards/static/js/index.js"
+    "template": "/bakalari_rewards/static/templates/index.html"
   }
 ]
