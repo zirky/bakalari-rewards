@@ -3,6 +3,7 @@
     "name": "PageBakalariRewards",
     "path": "/bakalari_rewards/",
     "icon": "school",
-    "template": "/bakalari_rewards/static/templates/index.html"
+    "template": "/bakalari_rewards/static/templates/index.html",
+    "component": "/bakalari_rewards/static/js/index.js"
   }
 ]
