@@ -1,2 +1,327 @@
-<!-- This file is intentionally left empty. -->
-<!-- The extension UI is rendered via templates/index.html (Jinja2 + Vue.createApp). -->
+<template>
+  <div class="row q-col-gutter-md">
+    <div class="col-12 q-gutter-y-md">
+      <q-card>
+        <q-card-section>
+          <h5 class="text-subtitle1 q-my-none">
+            <strong>Bakáláři Rewards</strong> &mdash; Automatické odměny v Bitcoin za školní známky
+          </h5>
+        </q-card-section>
+      </q-card>
+
+      <q-banner
+        v-if="hasBacktestStudents"
+        inline-actions
+        rounded
+        class="bg-orange-2 text-deep-orange-10"
+      >
+        <template v-slot:avatar>
+          <q-icon name="warning" color="deep-orange-8" />
+        </template>
+        <strong>Backtest režim je aktivní.</strong>
+        <span class="q-ml-sm">
+          Může dojít ke znovuzpracování a znovuproplacení historických známek.
+        </span>
+      </q-banner>
+
+      <q-card>
+        <q-card-section>
+          <div class="row items-center no-wrap q-mb-md">
+            <div class="col">
+              <h5 class="text-subtitle1 q-my-none">Seznam žáků</h5>
+            </div>
+            <div class="col-auto">
+              <q-btn unelevated color="primary" @click="openAddDialog" label="Přidat žáka" />
+            </div>
+          </div>
+          <q-table
+            dense
+            flat
+            :rows="students"
+            :columns="studentsTable.columns"
+            row-key="id"
+            no-data-label="Zatím žádní žáci"
+          >
+            <template v-slot:body-cell-name="props">
+              <q-td :props="props">
+                <div class="row items-center no-wrap">
+                  <span>{{ props.row.name }}</span>
+                  <q-badge
+                    v-if="props.row.backtest_mode"
+                    color="red"
+                    text-color="white"
+                    class="q-ml-sm"
+                    label="BACKTEST"
+                  />
+                </div>
+              </q-td>
+            </template>
+
+            <template v-slot:body-cell-reward_sats="props">
+              <q-td :props="props">
+                <span>1: {{ props.row.reward_grade_1 }} sat</span>
+                <span class="q-ml-sm">2: {{ props.row.reward_grade_2 }} sat</span>
+                <span class="q-ml-sm">3: {{ props.row.reward_grade_3 }} sat</span>
+                <span class="q-ml-sm">4: {{ props.row.reward_grade_4 }} sat</span>
+                <span class="q-ml-sm">5: {{ props.row.reward_grade_5 }} sat</span>
+              </q-td>
+            </template>
+
+            <template v-slot:body-cell-actions="props">
+              <q-td auto-width>
+                <q-btn flat dense color="primary" icon="edit" @click="openEditDialog(props.row)">
+                  <q-tooltip>Upravit</q-tooltip>
+                </q-btn>
+                <q-btn flat dense color="negative" icon="delete" @click="deleteStudent(props.row.id)">
+                  <q-tooltip>Smazat</q-tooltip>
+                </q-btn>
+              </q-td>
+            </template>
+          </q-table>
+        </q-card-section>
+      </q-card>
+
+      <!-- Settings karta -->
+      <q-card>
+        <q-card-section>
+          <div class="row items-center no-wrap q-mb-md">
+            <div class="col">
+              <h5 class="text-subtitle1 q-my-none">Nastavení rozšíření</h5>
+            </div>
+            <div class="col-auto">
+              <q-btn unelevated color="secondary" icon="settings" label="Upravit" @click="openSettingsDialog" />
+            </div>
+          </div>
+
+          <div v-if="settingsLoaded" class="q-gutter-y-xs">
+            <div class="row q-gutter-x-lg">
+              <div>
+                <span class="text-caption text-grey">LNbits API URL</span><br />
+                <span v-if="settings.managed_by_env && settings.managed_by_env.lnbits_api_url" class="text-caption text-orange-8">
+                  <q-icon name="lock" size="xs" /> z ENV
+                </span>
+                <span v-else class="text-body2">{{ settings.lnbits_api_url || '—' }}</span>
+              </div>
+              <div>
+                <span class="text-caption text-grey">API Key</span><br />
+                <span v-if="settings.managed_by_env && settings.managed_by_env.lnbits_api_key" class="text-caption text-orange-8">
+                  <q-icon name="lock" size="xs" /> z ENV
+                </span>
+                <q-badge v-else-if="settings.api_key_set" color="positive" label="nastaven" />
+                <q-badge v-else color="negative" label="nenastaveno" />
+              </div>
+              <div>
+                <span class="text-caption text-grey">Výplaty</span><br />
+                <q-badge :color="settings.payout_enabled ? 'positive' : 'grey'" :label="settings.payout_enabled ? 'zapnuto' : 'vypnuto'" />
+              </div>
+              <div>
+                <span class="text-caption text-grey">Dry run</span><br />
+                <span v-if="settings.managed_by_env && settings.managed_by_env.dry_run" class="text-caption text-orange-8">
+                  <q-icon name="lock" size="xs" /> z ENV
+                </span>
+                <q-badge v-else :color="settings.dry_run ? 'warning' : 'grey'" :label="settings.dry_run ? 'aktivní' : 'vypnuto'" />
+              </div>
+              <div>
+                <span class="text-caption text-grey">Max sats / run</span><br />
+                <span class="text-body2">{{ settings.max_sats_per_run }}</span>
+              </div>
+            </div>
+          </div>
+          <div v-else class="text-grey text-caption">Načítám nastavení...</div>
+        </q-card-section>
+      </q-card>
+    </div>
+  </div>
+
+  <!-- Dialog: přidat / upravit žáka -->
+  <q-dialog v-model="formDialog.show" persistent>
+    <q-card style="min-width: 550px; max-width: 90vw">
+      <q-card-section class="row items-center">
+        <div class="text-h6">
+          {{ formDialog.editMode ? 'Upravit žáka' : 'Přidat žáka' }}
+        </div>
+        <q-space />
+        <q-btn icon="close" flat round dense @click="formDialog.show = false" />
+      </q-card-section>
+
+      <q-separator />
+
+      <q-card-section style="max-height: 70vh" class="scroll">
+        <q-input v-model="formDialog.data.name" label="Jméno žáka" filled class="q-mb-md" />
+        <q-input v-model="formDialog.data.bakalari_url" label="URL Bakálářů" filled class="q-mb-md" />
+        <q-input v-model="formDialog.data.bakalari_username" label="Přihlašovací jméno" filled class="q-mb-md" />
+        <q-input v-model="formDialog.data.bakalari_password" label="Heslo" type="password" filled class="q-mb-md" />
+        <q-input v-model="formDialog.data.ln_address" label="Lightning adresa" filled class="q-mb-md" hint="např. student@wallet.satoshi.place" />
+
+        <q-toggle
+          v-model="formDialog.data.backtest_mode"
+          color="warning"
+          checked-icon="warning"
+          unchecked-icon="schedule"
+          label="Backtest režim"
+          class="q-mb-sm"
+        />
+
+        <q-banner
+          v-if="formDialog.data.backtest_mode"
+          rounded
+          class="bg-red-1 text-red-10 q-mb-md"
+        >
+          <template v-slot:avatar>
+            <q-icon name="warning" color="red-8" />
+          </template>
+          <strong>Pozor:</strong>
+          Zapnutý backtest může vést ke znovuzpracování a znovuproplacení historických známek.
+        </q-banner>
+
+        <div class="text-subtitle2 q-mb-sm">Odměna za známku (sats)</div>
+        <div class="row q-gutter-sm">
+          <q-input v-model.number="formDialog.data.reward_grade_1" label="Známka 1" type="number" filled style="width:100px" />
+          <q-input v-model.number="formDialog.data.reward_grade_2" label="Známka 2" type="number" filled style="width:100px" />
+          <q-input v-model.number="formDialog.data.reward_grade_3" label="Známka 3" type="number" filled style="width:100px" />
+          <q-input v-model.number="formDialog.data.reward_grade_4" label="Známka 4" type="number" filled style="width:100px" />
+          <q-input v-model.number="formDialog.data.reward_grade_5" label="Známka 5" type="number" filled style="width:100px" />
+        </div>
+      </q-card-section>
+
+      <q-separator />
+
+      <q-card-actions align="right" class="q-pa-md">
+        <q-btn flat label="Zrušit" @click="formDialog.show = false" />
+        <q-btn
+          unelevated
+          color="primary"
+          :label="formDialog.editMode ? 'Uložit změny' : 'Uložit žáka'"
+          @click="saveStudent"
+        />
+      </q-card-actions>
+    </q-card>
+  </q-dialog>
+
+  <!-- Dialog: nastavení rozšíření -->
+  <q-dialog v-model="settingsDialog.show" persistent>
+    <q-card style="min-width: 500px; max-width: 90vw">
+      <q-card-section class="row items-center">
+        <div class="text-h6">Nastavení rozšíření</div>
+        <q-space />
+        <q-btn icon="close" flat round dense @click="settingsDialog.show = false" />
+      </q-card-section>
+
+      <q-separator />
+
+      <q-card-section style="max-height: 70vh" class="scroll q-gutter-y-md">
+
+        <q-banner
+          v-if="settingsDialog.data.managed_by_env && (settingsDialog.data.managed_by_env.lnbits_api_url || settingsDialog.data.managed_by_env.lnbits_api_key)"
+          rounded
+          class="bg-orange-1 text-orange-10 q-mb-sm"
+        >
+          <template v-slot:avatar>
+            <q-icon name="lock" color="orange-8" />
+          </template>
+          Některé hodnoty jsou spravované přes ENV proměnné a nelze je zde přepsat.
+        </q-banner>
+
+        <div class="text-subtitle2">LNbits API</div>
+
+        <q-input
+          v-model="settingsDialog.data.lnbits_api_url"
+          label="LNbits API URL (např. https://legend.lnbits.com)"
+          filled
+          :disable="settingsDialog.data.managed_by_env && settingsDialog.data.managed_by_env.lnbits_api_url"
+          class="q-mb-sm"
+        />
+
+        <div class="text-caption text-grey q-mb-xs">Admin API klíč</div>
+        <div v-if="settingsDialog.data.managed_by_env && settingsDialog.data.managed_by_env.lnbits_api_key" class="text-caption text-orange-8 q-mb-md">
+          <q-icon name="lock" size="xs" /> API Key je nastaven přes ENV, nelze přepsat.
+        </div>
+        <template v-else>
+          <q-input
+            v-if="!settingsDialog.data.api_key_set || settingsDialog.showApiKeyInput"
+            v-model="settingsDialog.data.lnbits_api_key"
+            label="Admin API klíč"
+            filled
+            type="password"
+            hint="Admin klíč z LNbits peněženky"
+            class="q-mb-sm"
+          />
+          <div v-else class="row items-center q-mb-sm">
+            <q-badge color="positive" label="API klíč je nastaven" class="q-mr-sm" />
+            <q-btn flat dense size="sm" label="Změnit" @click="settingsDialog.showApiKeyInput = true" />
+            <q-btn flat dense size="sm" color="negative" label="Smazat" @click="settingsDialog.data.clear_api_key = true; settingsDialog.showApiKeyInput = false" />
+          </div>
+          <q-banner
+            v-if="settingsDialog.data.clear_api_key"
+            rounded
+            class="bg-red-1 text-red-10 q-mb-sm"
+          >
+            <q-icon name="warning" color="red-8" /> API Key bude smazán při uložení.
+            <q-btn flat dense size="sm" label="Zrušit" @click="settingsDialog.data.clear_api_key = false" />
+          </q-banner>
+        </template>
+
+        <q-separator class="q-my-sm" />
+
+        <div class="text-subtitle2">Chování</div>
+
+        <q-item tag="label" class="q-px-none">
+          <q-item-section avatar>
+            <q-toggle v-model="settingsDialog.data.payout_enabled" color="positive" />
+          </q-item-section>
+          <q-item-section>
+            <q-item-label>Vyplácet odměny</q-item-label>
+            <q-item-label caption>Pokud vypnuto, známky se pouze logují bez platby</q-item-label>
+          </q-item-section>
+        </q-item>
+
+        <q-item tag="label" class="q-px-none">
+          <q-item-section avatar>
+            <q-toggle
+              v-model="settingsDialog.data.dry_run"
+              color="warning"
+              :disable="settingsDialog.data.managed_by_env && settingsDialog.data.managed_by_env.dry_run"
+            />
+          </q-item-section>
+          <q-item-section>
+            <q-item-label>
+              Dry run
+              <span v-if="settingsDialog.data.managed_by_env && settingsDialog.data.managed_by_env.dry_run" class="text-caption text-orange-8 q-ml-sm">
+                <q-icon name="lock" size="xs" /> z ENV
+              </span>
+            </q-item-label>
+            <q-item-label caption>Simuluje platby bez skutečného odvádění sats</q-item-label>
+          </q-item-section>
+        </q-item>
+
+        <q-item tag="label" class="q-px-none">
+          <q-item-section avatar>
+            <q-toggle v-model="settingsDialog.data.allow_insecure_tls" color="negative" />
+          </q-item-section>
+          <q-item-section>
+            <q-item-label>Povolit nespodný TLS</q-item-label>
+            <q-item-label caption>Ignoruje chyby SSL certifikátu (pouze pro vývoj)</q-item-label>
+          </q-item-section>
+        </q-item>
+
+        <q-separator class="q-my-sm" />
+
+        <q-input
+          v-model.number="settingsDialog.data.max_sats_per_run"
+          label="Max. sats na jeden běh"
+          type="number"
+          filled
+          hint="Pojistka proti nečekaným velkým platbám"
+        />
+
+      </q-card-section>
+
+      <q-separator />
+
+      <q-card-actions align="right" class="q-pa-md">
+        <q-btn flat label="Zrušit" @click="settingsDialog.show = false" />
+        <q-btn unelevated color="primary" label="Uložit nastavení" @click="saveSettings" />
+      </q-card-actions>
+    </q-card>
+  </q-dialog>
+</template>

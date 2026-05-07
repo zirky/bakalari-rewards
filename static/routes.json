@@ -1,0 +1,8 @@
+[
+  {
+    "name": "PageBakalariRewards",
+    "path": "/bakalari_rewards/",
+    "icon": "school",
+    "template": "/bakalari_rewards/static/templates/index.html"
+  }
+]
