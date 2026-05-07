@@ -12,6 +12,7 @@ from .crud import (
     get_processed_mark,
     save_processed_mark,
     update_student_last_check,
+    get_extension_settings,
 )
 
 GRADE_REWARD_MAP = {
@@ -51,14 +52,58 @@ def get_env_int(name: str, default: int) -> int:
         return default
 
 
-def get_lnbits_config() -> dict:
+async def get_lnbits_config() -> dict:
+    """
+    Nacte konfiguraci LNbits. Env promenne maji vzdy prioritu nad DB.
+    Pokud env neni nastavena, pouzije se hodnota z DB (extension_settings).
+    """
+    from .models import decrypt_api_key
+
+    db_settings = await get_extension_settings()
+
+    # --- api_url ---
+    api_url = (
+        os.environ.get("BAKALARI_REWARDS_LNBITS_API_URL")
+        or (db_settings.lnbits_api_url if db_settings else None)
+        or "http://localhost:5000"
+    )
+
+    # --- api_key ---
+    api_key = os.environ.get("BAKALARI_REWARDS_LNBITS_API_KEY")
+    if not api_key and db_settings and db_settings.lnbits_api_key_enc:
+        api_key = decrypt_api_key(db_settings.lnbits_api_key_enc)
+
+    # --- allow_insecure_tls ---
+    if os.environ.get("BAKALARI_REWARDS_ALLOW_INSECURE_TLS") is not None:
+        allow_insecure_tls = get_env_bool("BAKALARI_REWARDS_ALLOW_INSECURE_TLS", False)
+    else:
+        allow_insecure_tls = db_settings.allow_insecure_tls if db_settings else False
+
+    # --- payout_enabled ---
+    if os.environ.get("BAKALARI_REWARDS_PAYOUT_ENABLED") is not None:
+        payout_enabled = get_env_bool("BAKALARI_REWARDS_PAYOUT_ENABLED", True)
+    else:
+        payout_enabled = db_settings.payout_enabled if db_settings else True
+
+    # --- dry_run ---
+    if os.environ.get("BAKALARI_REWARDS_DRY_RUN") is not None:
+        dry_run = get_env_bool("BAKALARI_REWARDS_DRY_RUN", False)
+    else:
+        dry_run = db_settings.dry_run if db_settings else False
+
+    # --- max_sats_per_run ---
+    if os.environ.get("BAKALARI_REWARDS_MAX_SATS_PER_RUN") is not None:
+        max_sats_per_run = get_env_int("BAKALARI_REWARDS_MAX_SATS_PER_RUN", 1_000_000)
+    else:
+        max_sats_per_run = db_settings.max_sats_per_run if db_settings else 1_000_000
+
     return {
-        "api_url": os.environ.get("BAKALARI_REWARDS_LNBITS_API_URL", "http://localhost:5000"),
-        "api_key": os.environ.get("BAKALARI_REWARDS_LNBITS_API_KEY"),
-        "allow_insecure_tls": get_env_bool("BAKALARI_REWARDS_ALLOW_INSECURE_TLS", False),
-        "payout_enabled": get_env_bool("BAKALARI_REWARDS_PAYOUT_ENABLED", True),
-        "dry_run": get_env_bool("BAKALARI_REWARDS_DRY_RUN", False),
-        "max_sats_per_run": get_env_int("BAKALARI_REWARDS_MAX_SATS_PER_RUN", 1000000),
+        "api_url": api_url,
+        "api_key": api_key,
+        "allow_insecure_tls": allow_insecure_tls,
+        "payout_enabled": payout_enabled,
+        "dry_run": dry_run,
+        "max_sats_per_run": max_sats_per_run,
     }
 
 
@@ -321,7 +366,6 @@ async def process_student_grades(student) -> None:
 
                 if balance <= 0:
                     from .crud import update_student_czk_deficit
-
                     await update_student_czk_deficit(student.id, abs(balance))
                     processed_marks.append(mhash)
                     continue
@@ -329,7 +373,6 @@ async def process_student_grades(student) -> None:
                 reward_sats = czk_to_sats(balance, czk_per_btc)
 
                 from .crud import update_student_czk_deficit
-
                 await update_student_czk_deficit(student.id, 0)
             else:
                 sat_field = GRADE_REWARD_MAP[grade]
@@ -395,15 +438,8 @@ async def process_student_grades(student) -> None:
 
 
 async def send_reward_via_withdraw_link(withdraw_link: str, amount_sats: int, memo: str) -> bool:
-    """
-    Lokalni testovaci implementace:
-    - konfigurace LNbits se cte z environment variables
-    - payout je rizeny env konfiguraci
-    - dry_run je defaultne zapnuty
-    - zatim se ignoruje withdraw_link a testuje se pouze LNbits send pipeline
-    """
     try:
-        config = get_lnbits_config()
+        config = await get_lnbits_config()  # <-- nyni async!
 
         logger.info(
             f"send_reward_via_withdraw_link: target={withdraw_link}, amount={amount_sats} sat, memo={memo}"
