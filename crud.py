@@ -3,7 +3,14 @@ from typing import List, Optional
 from lnbits.db import Database
 from lnbits.helpers import urlsafe_short_hash
 
-from .models import BakalariStudent, CreateBakalariStudent, encrypt_password
+from .models import (
+    BakalariStudent,
+    CreateBakalariStudent,
+    encrypt_password,
+    ExtensionSettings,
+    CreateExtensionSettings,
+    encrypt_api_key,
+)
 
 db = Database("ext_bakalari_rewards")
 
@@ -201,3 +208,57 @@ async def delete_processed_marks_from(student_id: str, from_date: str) -> None:
         """,
         {"sid": student_id, "from_date": from_date},
     )
+
+
+# --- Extension Settings ---
+
+async def get_extension_settings() -> Optional[ExtensionSettings]:
+    return await db.fetchone(
+        "SELECT * FROM bakalari_rewards.extension_settings WHERE id = 'global'",
+        model=ExtensionSettings,
+    )
+
+
+async def upsert_extension_settings(data: CreateExtensionSettings) -> ExtensionSettings:
+    existing = await get_extension_settings()
+
+    if data.clear_api_key:
+        api_key_enc = None
+    elif data.lnbits_api_key:
+        api_key_enc = encrypt_api_key(data.lnbits_api_key)
+    else:
+        api_key_enc = existing.lnbits_api_key_enc if existing else None
+
+    settings = ExtensionSettings(
+        id="global",
+        lnbits_api_url=data.lnbits_api_url if data.lnbits_api_url is not None
+            else (existing.lnbits_api_url if existing else None),
+        lnbits_api_key_enc=api_key_enc,
+        payout_enabled=data.payout_enabled if data.payout_enabled is not None
+            else (existing.payout_enabled if existing else True),
+        dry_run=data.dry_run if data.dry_run is not None
+            else (existing.dry_run if existing else False),
+        max_sats_per_run=data.max_sats_per_run if data.max_sats_per_run is not None
+            else (existing.max_sats_per_run if existing else 1_000_000),
+        allow_insecure_tls=data.allow_insecure_tls if data.allow_insecure_tls is not None
+            else (existing.allow_insecure_tls if existing else False),
+    )
+
+    if existing:
+        await db.execute(
+            """
+            UPDATE bakalari_rewards.extension_settings SET
+                lnbits_api_url = :lnbits_api_url,
+                lnbits_api_key_enc = :lnbits_api_key_enc,
+                payout_enabled = :payout_enabled,
+                dry_run = :dry_run,
+                max_sats_per_run = :max_sats_per_run,
+                allow_insecure_tls = :allow_insecure_tls
+            WHERE id = 'global'
+            """,
+            settings.dict(),
+        )
+    else:
+        await db.insert("bakalari_rewards.extension_settings", settings)
+
+    return settings
