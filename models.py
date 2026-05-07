@@ -135,9 +135,12 @@ def encrypt_api_key(plaintext: str) -> str:
 
 
 def decrypt_api_key(ciphertext: str) -> Optional[str]:
-    if _fernet and ciphertext:
+    """Desifrovani API klice Fernetem. Pokud klic neni nastaven, vraci plaintext."""
+    if not ciphertext:
+        return None
+    if _fernet:
         try:
             return _fernet.decrypt(ciphertext.encode()).decode()
         except Exception:
-            return None
-    return None
+            return ciphertext  # fallback - uz plaintext nebo spatny klic
+    return ciphertext  # Fernet neni nastaven, ulozeno jako plaintext
