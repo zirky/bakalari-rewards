@@ -105,6 +105,7 @@ class BakalariStudentPublic(BaseModel):
     czk_deficit: float = 0
     backtest_mode: bool = False
     # Vynechana citliva pole: bakalari_password
+
 # --- Extension Settings ---
 
 class ExtensionSettings(BaseModel):
