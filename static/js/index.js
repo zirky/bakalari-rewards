@@ -5,6 +5,8 @@ window.app = Vue.createApp({
   data: function () {
     return {
       students: [],
+      settings: {},
+      settingsLoaded: false,
       formDialog: {
         show: false,
         editMode: false,
@@ -30,6 +32,21 @@ window.app = Vue.createApp({
           last_check: null,
           czk_deficit: 0,
           backtest_mode: false
+        }
+      },
+      settingsDialog: {
+        show: false,
+        showApiKeyInput: false,
+        data: {
+          lnbits_api_url: '',
+          lnbits_api_key: '',
+          api_key_set: false,
+          payout_enabled: true,
+          dry_run: false,
+          max_sats_per_run: 1000000,
+          allow_insecure_tls: false,
+          clear_api_key: false,
+          managed_by_env: {}
         }
       },
       studentsTable: {
@@ -60,6 +77,56 @@ window.app = Vue.createApp({
         .request('GET', '/bakalari_rewards/api/v1/students', this.g.user.wallets[0].adminkey)
         .then(function (response) {
           self.students = response.data
+        })
+        .catch(function (error) {
+          LNbits.utils.notifyApiError(error)
+        })
+    },
+    getSettings: function () {
+      var self = this
+      LNbits.api
+        .request('GET', '/bakalari_rewards/api/v1/settings', this.g.user.wallets[0].adminkey)
+        .then(function (response) {
+          self.settings = response.data
+          self.settingsLoaded = true
+        })
+        .catch(function (error) {
+          LNbits.utils.notifyApiError(error)
+        })
+    },
+    openSettingsDialog: function () {
+      var s = this.settings
+      this.settingsDialog.showApiKeyInput = false
+      this.settingsDialog.data = {
+        lnbits_api_url: s.lnbits_api_url || '',
+        lnbits_api_key: '',
+        api_key_set: !!s.api_key_set,
+        payout_enabled: s.payout_enabled !== undefined ? s.payout_enabled : true,
+        dry_run: s.dry_run !== undefined ? s.dry_run : false,
+        max_sats_per_run: s.max_sats_per_run || 1000000,
+        allow_insecure_tls: !!s.allow_insecure_tls,
+        clear_api_key: false,
+        managed_by_env: s.managed_by_env || {}
+      }
+      this.settingsDialog.show = true
+    },
+    saveSettings: function () {
+      var self = this
+      var payload = {
+        lnbits_api_url: this.settingsDialog.data.lnbits_api_url || null,
+        lnbits_api_key: this.settingsDialog.data.lnbits_api_key || null,
+        payout_enabled: this.settingsDialog.data.payout_enabled,
+        dry_run: this.settingsDialog.data.dry_run,
+        max_sats_per_run: this.settingsDialog.data.max_sats_per_run,
+        allow_insecure_tls: this.settingsDialog.data.allow_insecure_tls,
+        clear_api_key: !!this.settingsDialog.data.clear_api_key
+      }
+      LNbits.api
+        .request('PUT', '/bakalari_rewards/api/v1/settings', this.g.user.wallets[0].adminkey, payload)
+        .then(function () {
+          self.settingsDialog.show = false
+          self.getSettings()
+          LNbits.utils.notifySuccess('Nastavení uloženo')
         })
         .catch(function (error) {
           LNbits.utils.notifyApiError(error)
@@ -220,6 +287,7 @@ window.app = Vue.createApp({
   created: function () {
     if (this.g && this.g.user && this.g.user.wallets.length) {
       this.getStudents()
+      this.getSettings()
     }
   }
 })
