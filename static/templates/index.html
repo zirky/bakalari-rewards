@@ -148,22 +148,10 @@
 
       <q-card-section style="max-height: 70vh" class="scroll">
         <q-input v-model="formDialog.data.name" label="Jméno žáka" filled class="q-mb-md" />
-
-        <q-select
-          v-model="formDialog.data.wallet"
-          :options="g.user.wallets"
-          option-value="id"
-          option-label="name"
-          emit-value
-          map-options
-          label="Peněženka"
-          filled
-          class="q-mb-md"
-        />
-
         <q-input v-model="formDialog.data.bakalari_url" label="URL Bakálářů" filled class="q-mb-md" />
         <q-input v-model="formDialog.data.bakalari_username" label="Přihlašovací jméno" filled class="q-mb-md" />
         <q-input v-model="formDialog.data.bakalari_password" label="Heslo" type="password" filled class="q-mb-md" />
+        <q-input v-model="formDialog.data.ln_address" label="Lightning adresa" filled class="q-mb-md" hint="např. student@wallet.satoshi.place" />
 
         <q-toggle
           v-model="formDialog.data.backtest_mode"

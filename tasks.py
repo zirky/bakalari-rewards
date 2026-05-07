@@ -136,13 +136,13 @@ def decrypt_bakalari_password(encrypted: str) -> str:
         return encrypted
 
 
-async def fetch_bakalari_grades(bakalari_url: str, username: str, password: str):
+async def fetch_bakalari_grades(bakalari_url: str, username: str, password: str, allow_insecure_tls: bool = False):
     """Prihlasi se do Bakalaru a vrati seznam znamek."""
     base = bakalari_url.rstrip("/")
     prefixes = ["/webrodice", "/bakalari", "/bakaweb", "/dm", "/mobile", ""]
     last_error = "zadny prefix nevratil uspech"
 
-    async with httpx.AsyncClient(timeout=30, verify=False) as client:
+    async with httpx.AsyncClient(timeout=30, verify=not allow_insecure_tls) as client:
         for prefix in prefixes:
             try:
                 token_url = base + prefix + "/api/login"
@@ -257,12 +257,14 @@ async def process_student_grades(student) -> None:
             logger.debug(f"Student {student.name}: prilis brzy na dalsi kontrolu, preskakuji")
             return
 
+        config = await get_lnbits_config()
         plaintext_password = decrypt_bakalari_password(student.bakalari_password)
 
         grades_data = await fetch_bakalari_grades(
             student.bakalari_url,
             student.bakalari_username,
             plaintext_password,
+            allow_insecure_tls=config["allow_insecure_tls"],
         )
 
         subjects = grades_data.get("Subjects", grades_data.get("Marks", []))
@@ -409,6 +411,7 @@ async def process_student_grades(student) -> None:
                     ln_target,
                     total_reward_sats,
                     memo,
+                    config=config,
                 )
             else:
                 logger.warning(
@@ -437,9 +440,15 @@ async def process_student_grades(student) -> None:
         logger.warning(f"Chyba pri zpracovani studenta {student.name}: {exc}")
 
 
-async def send_reward_via_withdraw_link(withdraw_link: str, amount_sats: int, memo: str) -> bool:
+async def send_reward_via_withdraw_link(
+    withdraw_link: str,
+    amount_sats: int,
+    memo: str,
+    config: dict | None = None,
+) -> bool:
     try:
-        config = await get_lnbits_config()  # <-- nyni async!
+        if config is None:
+            config = await get_lnbits_config()
 
         logger.info(
             f"send_reward_via_withdraw_link: target={withdraw_link}, amount={amount_sats} sat, memo={memo}"
