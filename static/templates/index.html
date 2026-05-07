@@ -1,3 +1,4 @@
+<script src="/bakalari_rewards/static/js/index.js"></script>
 <template>
   <div class="row q-col-gutter-md">
     <div class="col-12 q-gutter-y-md">
@@ -202,7 +203,7 @@
   <q-dialog v-model="settingsDialog.show" persistent>
     <q-card style="min-width: 500px; max-width: 90vw">
       <q-card-section class="row items-center">
-        <div class="text-h6">Nastavení rozšíření</div>
+        <div class="text-h6">Nastavení API</div>
         <q-space />
         <q-btn icon="close" flat round dense @click="settingsDialog.show = false" />
       </q-card-section>
@@ -222,16 +223,16 @@
           Některé hodnoty jsou spravované přes ENV proměnné a nelze je zde přepsat.
         </q-banner>
 
+        <div class="text-subtitle2">LNbits API</div>
+
         <q-input
           v-model="settingsDialog.data.lnbits_api_url"
-          label="LNbits API URL"
+          label="LNbits API URL (např. https://legend.lnbits.com)"
           filled
           :disable="settingsDialog.data.managed_by_env && settingsDialog.data.managed_by_env.lnbits_api_url"
-          hint="např. http://localhost:5000"
           class="q-mb-sm"
         />
 
-        <div class="text-caption text-grey q-mb-xs">API Key</div>
         <div v-if="settingsDialog.data.managed_by_env && settingsDialog.data.managed_by_env.lnbits_api_key" class="text-caption text-orange-8 q-mb-md">
           <q-icon name="lock" size="xs" /> API Key je nastaven přes ENV, nelze přepsat.
         </div>
@@ -239,14 +240,14 @@
           <q-input
             v-if="!settingsDialog.data.api_key_set || settingsDialog.showApiKeyInput"
             v-model="settingsDialog.data.lnbits_api_key"
-            label="Nový API Key"
+            label="Admin API klíč"
             filled
             type="password"
-            hint="Zadej pouze pokud chceš změnit. Nikdy se nezobrazí zpět."
+            hint="Admin klíč z LNbits peněženky"
             class="q-mb-sm"
           />
           <div v-else class="row items-center q-mb-sm">
-            <q-badge color="positive" label="API Key nastaven" class="q-mr-sm" />
+            <q-badge color="positive" label="API klíč je nastaven" class="q-mr-sm" />
             <q-btn flat dense size="sm" label="Změnit" @click="settingsDialog.showApiKeyInput = true" />
             <q-btn flat dense size="sm" color="negative" label="Smazat" @click="settingsDialog.data.clear_api_key = true; settingsDialog.showApiKeyInput = false" />
           </div>
@@ -262,36 +263,43 @@
 
         <q-separator class="q-my-sm" />
 
+        <div class="text-subtitle2">Chování</div>
+
         <q-toggle
           v-model="settingsDialog.data.payout_enabled"
           color="positive"
-          label="Výplaty povoleny"
+          label="Vyplácet odměny"
         />
+        <div class="text-caption text-grey q-ml-lg q-mb-sm">Pokud vypnuto, známky se pouze logují bez platby</div>
 
         <div>
           <q-toggle
             v-model="settingsDialog.data.dry_run"
             color="warning"
             :disable="settingsDialog.data.managed_by_env && settingsDialog.data.managed_by_env.dry_run"
-            label="Dry run (simulace, žádné reálné platby)"
+            label="Dry run"
           />
           <span v-if="settingsDialog.data.managed_by_env && settingsDialog.data.managed_by_env.dry_run" class="text-caption text-orange-8 q-ml-sm">
             <q-icon name="lock" size="xs" /> z ENV
           </span>
+          <div class="text-caption text-grey q-ml-lg q-mb-sm">Simuluje platby bez skutečného odvádění sats</div>
+        </div>
+
+        <div>
+          <q-toggle
+            v-model="settingsDialog.data.allow_insecure_tls"
+            color="negative"
+            label="Povolit nespodný TLS"
+          />
+          <div class="text-caption text-grey q-ml-lg q-mb-sm">Ignoruje chyby SSL certifikátu (pouze pro vývoj)</div>
         </div>
 
         <q-input
           v-model.number="settingsDialog.data.max_sats_per_run"
-          label="Max sats / run"
+          label="Max. sats na jeden běh"
           type="number"
           filled
-          hint="Maximální celková výplata za jeden cyklus"
-        />
-
-        <q-toggle
-          v-model="settingsDialog.data.allow_insecure_tls"
-          color="negative"
-          label="Povolit insecure TLS (self-signed certifikáty)"
+          hint="Pojistka proti nečekávaným velkým platbám"
         />
 
       </q-card-section>
