@@ -133,14 +133,13 @@ async def m010_add_extension_settings(db):
 
 async def m011_rename_api_key_to_enc(db):
     """
-    Prejmenovani lnbits_api_key → lnbits_api_key_enc (sifrovany klíč).
-    SQLite nepodporuje RENAME COLUMN ve starších verzích, proto ADD + DROP fallback.
+    Prida sloupec lnbits_api_key_enc (sifrovany klic).
+    Zkopiruje pripadna stara data z lnbits_api_key.
     """
     await _safe_alter(
         db,
         "ALTER TABLE bakalari_rewards.extension_settings ADD COLUMN lnbits_api_key_enc TEXT DEFAULT NULL"
     )
-    # Zkopiruje stara data (plaintext klic) do noveho sloupce
     try:
         await db.execute(
             "UPDATE bakalari_rewards.extension_settings SET lnbits_api_key_enc = lnbits_api_key WHERE lnbits_api_key_enc IS NULL"
