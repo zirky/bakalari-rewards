@@ -105,3 +105,38 @@ class BakalariStudentPublic(BaseModel):
     czk_deficit: float = 0
     backtest_mode: bool = False
     # Vynechana citliva pole: bakalari_password
+# --- Extension Settings ---
+
+class ExtensionSettings(BaseModel):
+    id: str = "global"
+    lnbits_api_url: Optional[str] = None
+    lnbits_api_key_enc: Optional[str] = None  # Fernet zasifrovany API key
+    payout_enabled: Optional[bool] = True
+    dry_run: Optional[bool] = False
+    max_sats_per_run: Optional[int] = 1_000_000
+    allow_insecure_tls: Optional[bool] = False
+
+
+class CreateExtensionSettings(BaseModel):
+    lnbits_api_url: Optional[str] = None
+    lnbits_api_key: Optional[str] = None  # plaintext pri zapisu, nikdy se neuklada
+    payout_enabled: Optional[bool] = None
+    dry_run: Optional[bool] = None
+    max_sats_per_run: Optional[int] = None
+    allow_insecure_tls: Optional[bool] = None
+    clear_api_key: bool = False  # True = smazat ulozeny klic
+
+
+def encrypt_api_key(plaintext: str) -> str:
+    if _fernet and plaintext:
+        return _fernet.encrypt(plaintext.encode()).decode()
+    return plaintext
+
+
+def decrypt_api_key(ciphertext: str) -> Optional[str]:
+    if _fernet and ciphertext:
+        try:
+            return _fernet.decrypt(ciphertext.encode()).decode()
+        except Exception:
+            return None
+    return None
