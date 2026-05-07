@@ -46,6 +46,13 @@ window.app = Vue.createApp({
       }
     }
   },
+  computed: {
+    hasBacktestStudents: function () {
+      return this.students.some(function (student) {
+        return !!student.backtest_mode
+      })
+    }
+  },
   methods: {
     getStudents: function () {
       var self = this
@@ -90,7 +97,36 @@ window.app = Vue.createApp({
       this.formDialog.editMode = true
       this.formDialog.show = true
     },
+    confirmBacktestEnable: function () {
+      var isEnablingBacktest = false
+
+      if (this.formDialog.editMode) {
+        var originalStudent = this.students.find(function (student) {
+          return student.id === this.formDialog.data.id
+        }, this)
+
+        isEnablingBacktest = !!(
+          this.formDialog.data.backtest_mode &&
+          originalStudent &&
+          !originalStudent.backtest_mode
+        )
+      } else {
+        isEnablingBacktest = !!this.formDialog.data.backtest_mode
+      }
+
+      if (!isEnablingBacktest) {
+        return true
+      }
+
+      return window.confirm(
+        'Zapnout backtest režim?\n\nMůže dojít ke znovuzpracování a znovuproplacení historických známek.'
+      )
+    },
     saveStudent: function () {
+      if (!this.confirmBacktestEnable()) {
+        return
+      }
+
       if (this.formDialog.editMode) {
         this.updateStudent()
       } else {
