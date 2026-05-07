@@ -1,167 +1,428 @@
 {% extends "public.html" %}
 {% block page %}
-<div class="row q-col-gutter-md">
-  <div class="col-12 col-md-7 q-gutter-y-md">
-    <q-card>
-      <q-card-section>
-        <h5 class="text-subtitle1 q-my-none">
-          <strong>Bakaláři Rewards</strong> &mdash; Automatické odměny v Bitcoin za školní známky
-        </h5>
-      </q-card-section>
-    </q-card>
+<div id="vue" v-cloak>
+  <div class="row q-col-gutter-md">
+    <div class="col-12 q-gutter-y-md">
+      <q-card>
+        <q-card-section>
+          <h5 class="text-subtitle1 q-my-none">
+            <strong>Bakáláři Rewards</strong> &mdash; Automatické odměny v Bitcoin za školní známky
+          </h5>
+        </q-card-section>
+      </q-card>
 
-    <q-card>
-      <q-card-section>
-        <div class="row items-center no-wrap q-mb-md">
-          <div class="col">
-            <h5 class="text-subtitle1 q-my-none">Seznam žáků</h5>
+      <q-banner
+        v-if="hasBacktestStudents"
+        inline-actions
+        rounded
+        class="bg-orange-2 text-deep-orange-10"
+      >
+        <template v-slot:avatar>
+          <q-icon name="warning" color="deep-orange-8" />
+        </template>
+        <strong>Backtest režim je aktivní.</strong>
+        <span class="q-ml-sm">Může dojít ke znovuzpracování a znovuproplacení historických známek.</span>
+      </q-banner>
+
+      <q-card>
+        <q-card-section>
+          <div class="row items-center no-wrap q-mb-md">
+            <div class="col">
+              <h5 class="text-subtitle1 q-my-none">Seznam žáků</h5>
+            </div>
+            <div class="col-auto">
+              <q-btn unelevated color="primary" @click="openAddDialog" label="Přidat žáka" />
+            </div>
           </div>
-          <div class="col-auto">
-            <q-btn flat color="primary" @click="showStudentDialog = true" label="Přidat žáka" />
-          </div>
-        </div>
-        <q-table :rows="students" :columns="columns" row-key="id" :no-data-label="'Zatím žádní žáci'">
-          <template v-slot:body-cell-reward_sats="props">
-            <q-td auto-width>
-              <span>1: ${ props.row.reward_grade_1 } sat</span>
-              <span class="q-ml-sm">2: ${ props.row.reward_grade_2 } sat</span>
-              <span class="q-ml-sm">3: ${ props.row.reward_grade_3 } sat</span>
-              <span class="q-ml-sm">4: ${ props.row.reward_grade_4 } sat</span>
-              <span class="q-ml-sm">5: ${ props.row.reward_grade_5 } sat</span>
-            </q-td>
-          </template>
-          <template v-slot:body-cell-actions="props">
-            <q-td auto-width>
-              <q-btn flat dense color="negative" icon="delete" @click="deleteStudent(props.row.id)" />
-            </q-td>
-          </template>
-        </q-table>
-      </q-card-section>
-    </q-card>
-  </div>
-</div>
-
-<q-dialog v-model="showStudentDialog" persistent>
-  <q-card style="min-width: 400px">
-    <q-card-section>
-      <h6 class="q-my-none">Přidat žáka</h6>
-    </q-card-section>
-    <q-card-section>
-      <q-select filled v-model="newStudent.wallet" :options="g.user.wallets" option-value="id" option-label="name" emit-value map-options label="Peněženka LNbits" />
-      <q-input filled v-model="newStudent.name" label="Jméno žáka" class="q-mt-sm" />
-      <q-input filled v-model="newStudent.bakalari_url" label="URL Bakalářů" class="q-mt-sm" />
-      <q-input filled v-model="newStudent.bakalari_username" label="Uživatelské jméno Bakaláři" class="q-mt-sm" />
-      <q-input filled v-model="newStudent.bakalari_password" label="Heslo Bakaláři" type="password" class="q-mt-sm" />
-      <div class="q-mt-md">
-        <div class="text-subtitle2">Odměna za známku (sats)</div>
-        <div class="row q-col-gutter-sm q-mt-xs">
-          <div class="col-6 col-sm-4"><q-input filled v-model.number="newStudent.reward_grade_1" label="Známka 1 (sat)" type="number" min="0" /></div>
-          <div class="col-6 col-sm-4"><q-input filled v-model.number="newStudent.reward_grade_2" label="Známka 2 (sat)" type="number" min="0" /></div>
-          <div class="col-6 col-sm-4"><q-input filled v-model.number="newStudent.reward_grade_3" label="Známka 3 (sat)" type="number" min="0" /></div>
-          <div class="col-6 col-sm-4"><q-input filled v-model.number="newStudent.reward_grade_4" label="Známka 4 (sat)" type="number" min="0" /></div>
-          <div class="col-6 col-sm-4"><q-input filled v-model.number="newStudent.reward_grade_5" label="Známka 5 (sat)" type="number" min="0" /></div>
-        </div>
-      </div>
-    </q-card-section>
-    <q-card-actions align="right">
-      <q-btn flat label="Zrušit" @click="showStudentDialog = false" />
-      <q-btn color="primary" label="Přidat" @click="createStudent" />
-
-                <!-- BACKTEST MÓD - NEBEZPEČNÉ! -->
-              <div class="text-subtitle2 text-negative q-mt-md">
-                <q-icon name="warning" size="sm" /> Pokročilé nastavení (nebezpečné!)
-              </div>
-              
-              <!-- Vyděleň s varovaním při zapnutém backtest -->
-              <q-banner v-if="newStudent.backtest_mode" class="bg-negative text-white q-mt-sm" dense>
-                <template v-slot:avatar>
-                  <q-icon name="warning" color="white" />
-                </template>
-                <strong>VAROVÁNÍ:</strong> Backtest mód je ZAPNUTÝ! Při uložení budou smazány všechny staré záznamy!
-              </q-banner>
-              
-              <div class="row items-center q-mt-sm q-gutter-sm">
-                <q-toggle
-                  v-model="newStudent.backtest_mode"
-                  color="negative"
-                  keep-color
-                  dense
-                  @click.stop
-                />
-                <div class="text-body2">
-                  <strong class="text-negative">Backtest mód</strong>
-                  <q-icon name="help_outline" size="xs" class="q-ml-xs">
-                    <q-tooltip max-width="300px">
-                      <strong>VAROVÁNÍ - Nebezpečná funkce!</strong><br/><br/>
-                      Backtest mód smaže všechny staré zpracované známky a umožní znovu testovat systém odměn.<br/><br/>
-                      <strong>Použijte POUZE pro testování!</strong>
-                    </q-tooltip>
-                  </q-icon>
+          <q-table
+            dense flat
+            :rows="students"
+            :columns="studentsTable.columns"
+            row-key="id"
+            no-data-label="Zatím žádní žáci"
+          >
+            <template v-slot:body-cell-name="props">
+              <q-td :props="props">
+                <div class="row items-center no-wrap">
+                  <span>${ props.row.name }</span>
+                  <q-badge
+                    v-if="props.row.backtest_mode"
+                    color="red" text-color="white"
+                    class="q-ml-sm" label="BACKTEST"
+                  />
                 </div>
-              </div>                        </div>
-                          </div>
-    </q-card-actions>
-  </q-card>
-</q-dialog>
+              </q-td>
+            </template>
+            <template v-slot:body-cell-reward_sats="props">
+              <q-td :props="props">
+                <span>1: ${ props.row.reward_grade_1 } sat</span>
+                <span class="q-ml-sm">2: ${ props.row.reward_grade_2 } sat</span>
+                <span class="q-ml-sm">3: ${ props.row.reward_grade_3 } sat</span>
+                <span class="q-ml-sm">4: ${ props.row.reward_grade_4 } sat</span>
+                <span class="q-ml-sm">5: ${ props.row.reward_grade_5 } sat</span>
+              </q-td>
+            </template>
+            <template v-slot:body-cell-actions="props">
+              <q-td auto-width>
+                <q-btn flat dense color="primary" icon="edit" @click="openEditDialog(props.row)">
+                  <q-tooltip>Upravit</q-tooltip>
+                </q-btn>
+                <q-btn flat dense color="negative" icon="delete" @click="deleteStudent(props.row.id)">
+                  <q-tooltip>Smazat</q-tooltip>
+                </q-btn>
+              </q-td>
+            </template>
+          </q-table>
+        </q-card-section>
+      </q-card>
+
+      <q-card>
+        <q-card-section>
+          <div class="row items-center no-wrap q-mb-md">
+            <div class="col">
+              <h5 class="text-subtitle1 q-my-none">Nastavení rozšíření</h5>
+            </div>
+            <div class="col-auto">
+              <q-btn unelevated color="secondary" icon="settings" label="Upravit" @click="openSettingsDialog" />
+            </div>
+          </div>
+          <div v-if="settingsLoaded" class="q-gutter-y-xs">
+            <div class="row q-gutter-x-lg">
+              <div>
+                <span class="text-caption text-grey">LNbits API URL</span><br />
+                <span v-if="settings.managed_by_env && settings.managed_by_env.lnbits_api_url" class="text-caption text-orange-8">
+                  <q-icon name="lock" size="xs" /> z ENV
+                </span>
+                <span v-else class="text-body2">${ settings.lnbits_api_url || '—' }</span>
+              </div>
+              <div>
+                <span class="text-caption text-grey">API Key</span><br />
+                <span v-if="settings.managed_by_env && settings.managed_by_env.lnbits_api_key" class="text-caption text-orange-8">
+                  <q-icon name="lock" size="xs" /> z ENV
+                </span>
+                <q-badge v-else-if="settings.api_key_set" color="positive" label="nastaven" />
+                <q-badge v-else color="negative" label="nenastaveno" />
+              </div>
+              <div>
+                <span class="text-caption text-grey">Výplaty</span><br />
+                <q-badge :color="settings.payout_enabled ? 'positive' : 'grey'" :label="settings.payout_enabled ? 'zapnuto' : 'vypnuto'" />
+              </div>
+              <div>
+                <span class="text-caption text-grey">Dry run</span><br />
+                <span v-if="settings.managed_by_env && settings.managed_by_env.dry_run" class="text-caption text-orange-8">
+                  <q-icon name="lock" size="xs" /> z ENV
+                </span>
+                <q-badge v-else :color="settings.dry_run ? 'warning' : 'grey'" :label="settings.dry_run ? 'aktivní' : 'vypnuto'" />
+              </div>
+              <div>
+                <span class="text-caption text-grey">Max sats / run</span><br />
+                <span class="text-body2">${ settings.max_sats_per_run }</span>
+              </div>
+            </div>
+          </div>
+          <div v-else class="text-grey text-caption">Načítám nastavení...</div>
+        </q-card-section>
+      </q-card>
+    </div>
+  </div>
+
+  <!-- Dialog: přidat / upravit žáka -->
+  <q-dialog v-model="formDialog.show" persistent>
+    <q-card style="min-width: 550px; max-width: 90vw">
+      <q-card-section class="row items-center">
+        <div class="text-h6">${ formDialog.editMode ? 'Upravit žáka' : 'Přidat žáka' }</div>
+        <q-space />
+        <q-btn icon="close" flat round dense @click="formDialog.show = false" />
+      </q-card-section>
+      <q-separator />
+      <q-card-section style="max-height: 70vh" class="scroll">
+        <q-input v-model="formDialog.data.name" label="Jméno žáka" filled class="q-mb-md" />
+        <q-input v-model="formDialog.data.bakalari_url" label="URL Bakálářů" filled class="q-mb-md" />
+        <q-input v-model="formDialog.data.bakalari_username" label="Přihlašovací jméno" filled class="q-mb-md" />
+        <q-input v-model="formDialog.data.bakalari_password" label="Heslo" type="password" filled class="q-mb-md" />
+        <q-input v-model="formDialog.data.ln_address" label="Lightning adresa" filled class="q-mb-md" hint="např. student@wallet.satoshi.place" />
+        <q-toggle
+          v-model="formDialog.data.backtest_mode"
+          color="warning"
+          label="Backtest režim"
+          class="q-mb-sm"
+        />
+        <q-banner
+          v-if="formDialog.data.backtest_mode"
+          rounded
+          class="bg-red-1 text-red-10 q-mb-md"
+        >
+          <template v-slot:avatar>
+            <q-icon name="warning" color="red-8" />
+          </template>
+          <strong>Pozor:</strong> Zapnutý backtest může vést ke znovuzpracování a znovuproplacení historických známek.
+        </q-banner>
+        <div class="text-subtitle2 q-mb-sm">Odměna za známku (sats)</div>
+        <div class="row q-gutter-sm">
+          <q-input v-model.number="formDialog.data.reward_grade_1" label="Známka 1" type="number" filled style="width:100px" />
+          <q-input v-model.number="formDialog.data.reward_grade_2" label="Známka 2" type="number" filled style="width:100px" />
+          <q-input v-model.number="formDialog.data.reward_grade_3" label="Známka 3" type="number" filled style="width:100px" />
+          <q-input v-model.number="formDialog.data.reward_grade_4" label="Známka 4" type="number" filled style="width:100px" />
+          <q-input v-model.number="formDialog.data.reward_grade_5" label="Známka 5" type="number" filled style="width:100px" />
+        </div>
+      </q-card-section>
+      <q-separator />
+      <q-card-actions align="right" class="q-pa-md">
+        <q-btn flat label="Zrušit" @click="formDialog.show = false" />
+        <q-btn unelevated color="primary" :label="formDialog.editMode ? 'Uložit změny' : 'Uložit žáka'" @click="saveStudent" />
+      </q-card-actions>
+    </q-card>
+  </q-dialog>
+
+  <!-- Dialog: nastavení -->
+  <q-dialog v-model="settingsDialog.show" persistent>
+    <q-card style="min-width: 500px; max-width: 90vw">
+      <q-card-section class="row items-center">
+        <div class="text-h6">Nastavení API</div>
+        <q-space />
+        <q-btn icon="close" flat round dense @click="settingsDialog.show = false" />
+      </q-card-section>
+      <q-separator />
+      <q-card-section style="max-height: 70vh" class="scroll q-gutter-y-md">
+        <q-banner
+          v-if="settingsDialog.data.managed_by_env && (settingsDialog.data.managed_by_env.lnbits_api_url || settingsDialog.data.managed_by_env.lnbits_api_key)"
+          rounded class="bg-orange-1 text-orange-10 q-mb-sm"
+        >
+          <template v-slot:avatar>
+            <q-icon name="lock" color="orange-8" />
+          </template>
+          Některé hodnoty jsou spravované přes ENV proměnné a nelze je zde přepsat.
+        </q-banner>
+        <div class="text-subtitle2">LNbits API</div>
+        <q-input
+          v-model="settingsDialog.data.lnbits_api_url"
+          label="LNbits API URL (např. https://legend.lnbits.com)"
+          filled
+          :disable="settingsDialog.data.managed_by_env && settingsDialog.data.managed_by_env.lnbits_api_url"
+          class="q-mb-sm"
+        />
+        <div v-if="settingsDialog.data.managed_by_env && settingsDialog.data.managed_by_env.lnbits_api_key" class="text-caption text-orange-8 q-mb-md">
+          <q-icon name="lock" size="xs" /> API Key je nastaven přes ENV, nelze přepsat.
+        </div>
+        <template v-else>
+          <q-input
+            v-if="!settingsDialog.data.api_key_set || settingsDialog.showApiKeyInput"
+            v-model="settingsDialog.data.lnbits_api_key"
+            label="Admin API klíč"
+            filled type="password"
+            hint="Admin klíč z LNbits peněženky"
+            class="q-mb-sm"
+          />
+          <div v-else class="row items-center q-mb-sm">
+            <q-badge color="positive" label="API klíč je nastaven" class="q-mr-sm" />
+            <q-btn flat dense size="sm" label="Změnit" @click="settingsDialog.showApiKeyInput = true" />
+            <q-btn flat dense size="sm" color="negative" label="Smazat" @click="settingsDialog.data.clear_api_key = true; settingsDialog.showApiKeyInput = false" />
+          </div>
+          <q-banner v-if="settingsDialog.data.clear_api_key" rounded class="bg-red-1 text-red-10 q-mb-sm">
+            <q-icon name="warning" color="red-8" /> API Key bude smazán při uložení.
+            <q-btn flat dense size="sm" label="Zrušit" @click="settingsDialog.data.clear_api_key = false" />
+          </q-banner>
+        </template>
+        <q-separator class="q-my-sm" />
+        <div class="text-subtitle2">Chování</div>
+        <q-toggle v-model="settingsDialog.data.payout_enabled" color="positive" label="Vyplácet odměny" />
+        <div class="text-caption text-grey q-ml-lg q-mb-sm">Pokud vypnuto, známky se pouze logují bez platby</div>
+        <div>
+          <q-toggle
+            v-model="settingsDialog.data.dry_run"
+            color="warning"
+            :disable="settingsDialog.data.managed_by_env && settingsDialog.data.managed_by_env.dry_run"
+            label="Dry run"
+          />
+          <span v-if="settingsDialog.data.managed_by_env && settingsDialog.data.managed_by_env.dry_run" class="text-caption text-orange-8 q-ml-sm">
+            <q-icon name="lock" size="xs" /> z ENV
+          </span>
+          <div class="text-caption text-grey q-ml-lg q-mb-sm">Simuluje platby bez skutečného odvádění sats</div>
+        </div>
+        <div>
+          <q-toggle v-model="settingsDialog.data.allow_insecure_tls" color="negative" label="Povolit nespdný TLS" />
+          <div class="text-caption text-grey q-ml-lg q-mb-sm">Ignoruje chyby SSL certifikátu (pouze pro vývoj)</div>
+        </div>
+        <q-input
+          v-model.number="settingsDialog.data.max_sats_per_run"
+          label="Max. sats na jeden běh"
+          type="number" filled
+          hint="Pojistka proti nečekávaným velkým platbám"
+        />
+      </q-card-section>
+      <q-separator />
+      <q-card-actions align="right" class="q-pa-md">
+        <q-btn flat label="Zrušit" @click="settingsDialog.show = false" />
+        <q-btn unelevated color="primary" label="Uložit nastavení" @click="saveSettings" />
+      </q-card-actions>
+    </q-card>
+  </q-dialog>
+</div>
 {% endblock %}
 
 {% block scripts %}
-  new Vue({
-    el: '#vue',
+<script>
+  Vue.createApp({
     mixins: [windowMixin],
     delimiters: ['${', '}'],
     data: function () {
       return {
         students: [],
-        showStudentDialog: false,
-        newStudent: {
-          name: '',
-          wallet: '',
-          bakalari_url: '',
-          bakalari_username: '',
-          bakalari_password: '',
-          reward_grade_1: 100,
-          reward_grade_2: 75,
-          reward_grade_3: 50,
-          reward_grade_4: 25,
-          reward_grade_5: 0,
-                backtest_mode: false
+        settings: {},
+        settingsLoaded: false,
+        formDialog: {
+          show: false,
+          editMode: false,
+          data: {
+            id: null,
+            name: '',
+            bakalari_url: '',
+            bakalari_username: '',
+            bakalari_password: '',
+            ln_address: '',
+            reward_grade_1: 100,
+            reward_grade_2: 75,
+            reward_grade_3: 50,
+            reward_grade_4: 25,
+            reward_grade_5: 0,
+            backtest_mode: false
+          }
         },
-        columns: [
-          { name: 'name', label: 'Jméno', field: 'name', align: 'left' },
-          { name: 'bakalari_url', label: 'URL školy', field: 'bakalari_url', align: 'left' },
-          { name: 'reward_sats', label: 'Odměna za známky', align: 'left' },
-          { name: 'last_check', label: 'Poslední kontrola', field: 'last_check', align: 'left' },
-          { name: 'actions', label: 'Akce', align: 'center' }
-        ]
+        settingsDialog: {
+          show: false,
+          showApiKeyInput: false,
+          data: {
+            lnbits_api_url: '',
+            lnbits_api_key: '',
+            api_key_set: false,
+            payout_enabled: true,
+            dry_run: false,
+            max_sats_per_run: 1000000,
+            allow_insecure_tls: false,
+            clear_api_key: false,
+            managed_by_env: {}
+          }
+        },
+        studentsTable: {
+          columns: [
+            {name: 'name', align: 'left', label: 'Student', field: 'name'},
+            {name: 'bakalari_url', align: 'left', label: 'URL školy', field: 'bakalari_url'},
+            {name: 'ln_address', align: 'left', label: 'LN adresa', field: 'ln_address'},
+            {name: 'last_check', align: 'left', label: 'Poslední kontrola', field: 'last_check'},
+            {name: 'reward_sats', align: 'left', label: 'Odměny'},
+            {name: 'actions', align: 'right', label: ''}
+          ]
+        }
       }
     },
-    created: function () {
-      this.getStudents()
+    computed: {
+      hasBacktestStudents: function () {
+        return this.students.some(function (s) { return !!s.backtest_mode })
+      }
     },
     methods: {
       getStudents: function () {
         var self = this
-        LNbits.api.request('GET', '/bakalari_rewards/api/v1/students', this.g.user.wallets[0].inkey)
-          .then(function (response) { self.students = response.data })
+        LNbits.api.request('GET', '/bakalari_rewards/api/v1/students', this.g.user.wallets[0].adminkey)
+          .then(function (r) { self.students = r.data })
+          .catch(function (e) { LNbits.utils.notifyApiError(e) })
+      },
+      getSettings: function () {
+        var self = this
+        LNbits.api.request('GET', '/bakalari_rewards/api/v1/settings', this.g.user.wallets[0].adminkey)
+          .then(function (r) { self.settings = r.data; self.settingsLoaded = true })
+          .catch(function (e) { LNbits.utils.notifyApiError(e) })
+      },
+      openAddDialog: function () {
+        this.formDialog.data = {
+          id: null, name: '', bakalari_url: '', bakalari_username: '', bakalari_password: '',
+          ln_address: '', reward_grade_1: 100, reward_grade_2: 75, reward_grade_3: 50,
+          reward_grade_4: 25, reward_grade_5: 0, backtest_mode: false
+        }
+        this.formDialog.editMode = false
+        this.formDialog.show = true
+      },
+      openEditDialog: function (student) {
+        this.formDialog.data = {
+          id: student.id, name: student.name, bakalari_url: student.bakalari_url,
+          bakalari_username: student.bakalari_username, bakalari_password: '',
+          ln_address: student.ln_address || '',
+          reward_grade_1: student.reward_grade_1, reward_grade_2: student.reward_grade_2,
+          reward_grade_3: student.reward_grade_3, reward_grade_4: student.reward_grade_4,
+          reward_grade_5: student.reward_grade_5, backtest_mode: !!student.backtest_mode
+        }
+        this.formDialog.editMode = true
+        this.formDialog.show = true
+      },
+      saveStudent: function () {
+        if (this.formDialog.data.backtest_mode) {
+          if (!window.confirm('Zapnout backtest režim?\n\nMůže dojít ke znovuzpracování a znovuproplacení historických známek.')) return
+        }
+        if (this.formDialog.editMode) { this.updateStudent() } else { this.createStudent() }
       },
       createStudent: function () {
         var self = this
-        var wallet = this.g.user.wallets.find(function(w) { return w.id === self.newStudent.wallet })
-        if (!wallet) { wallet = this.g.user.wallets[0]; self.newStudent.wallet = wallet.id }
-        LNbits.api.request('POST', '/bakalari_rewards/api/v1/students', wallet.adminkey, self.newStudent)
-          .then(function (response) {
-            self.students.push(response.data)
-            self.showStudentDialog = false
-            self.newStudent = { name: '', wallet: '', bakalari_url: '', bakalari_username: '', bakalari_password: '', reward_grade_1: 100, reward_grade_2: 75, reward_grade_3: 50, reward_grade_4: 25, reward_grade_5: 0 }
-          }).catch(function(err) { LNbits.utils.notifyApiError(err) })
+        LNbits.api.request('POST', '/bakalari_rewards/api/v1/students', this.g.user.wallets[0].adminkey, this.formDialog.data)
+          .then(function (r) { self.students.push(r.data); self.formDialog.show = false })
+          .catch(function (e) { LNbits.utils.notifyApiError(e) })
+      },
+      updateStudent: function () {
+        var self = this
+        var d = this.formDialog.data
+        LNbits.api.request('PUT', '/bakalari_rewards/api/v1/students/' + d.id, this.g.user.wallets[0].adminkey, d)
+          .then(function (r) {
+            var idx = self.students.findIndex(function (s) { return s.id === d.id })
+            if (idx !== -1) self.students.splice(idx, 1, r.data)
+            self.formDialog.show = false
+          })
+          .catch(function (e) { LNbits.utils.notifyApiError(e) })
       },
       deleteStudent: function (id) {
         var self = this
-        LNbits.api.request('DELETE', '/bakalari_rewards/api/v1/students/' + id, this.g.user.wallets[0].adminkey)
-          .then(function () { self.students = self.students.filter(function (s) { return s.id !== id }) })
-          .catch(function(err) { LNbits.utils.notifyApiError(err) })
+        LNbits.utils.confirmDialog('Opravdu chcete smazat tohoto žáka?').onOk(function () {
+          LNbits.api.request('DELETE', '/bakalari_rewards/api/v1/students/' + id, self.g.user.wallets[0].adminkey)
+            .then(function () { self.students = self.students.filter(function (s) { return s.id !== id }) })
+            .catch(function (e) { LNbits.utils.notifyApiError(e) })
+        })
+      },
+      openSettingsDialog: function () {
+        var s = this.settings
+        this.settingsDialog.showApiKeyInput = false
+        this.settingsDialog.data = {
+          lnbits_api_url: s.lnbits_api_url || '',
+          lnbits_api_key: '',
+          api_key_set: !!s.api_key_set,
+          payout_enabled: s.payout_enabled !== undefined ? s.payout_enabled : true,
+          dry_run: !!s.dry_run,
+          max_sats_per_run: s.max_sats_per_run || 1000000,
+          allow_insecure_tls: !!s.allow_insecure_tls,
+          clear_api_key: false,
+          managed_by_env: s.managed_by_env || {}
+        }
+        this.settingsDialog.show = true
+      },
+      saveSettings: function () {
+        var self = this
+        var d = this.settingsDialog.data
+        LNbits.api.request('PUT', '/bakalari_rewards/api/v1/settings', this.g.user.wallets[0].adminkey, {
+          lnbits_api_url: d.lnbits_api_url || null,
+          lnbits_api_key: d.lnbits_api_key || null,
+          payout_enabled: d.payout_enabled,
+          dry_run: d.dry_run,
+          max_sats_per_run: d.max_sats_per_run,
+          allow_insecure_tls: d.allow_insecure_tls,
+          clear_api_key: !!d.clear_api_key
+        })
+          .then(function () { self.settingsDialog.show = false; self.getSettings() })
+          .catch(function (e) { LNbits.utils.notifyApiError(e) })
+      }
+    },
+    created: function () {
+      if (this.g && this.g.user && this.g.user.wallets.length) {
+        this.getStudents()
+        this.getSettings()
       }
     }
-  })
+  }).mount('#vue')
+</script>
 {% endblock %}
