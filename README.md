@@ -1,44 +1,59 @@
-`The README.md typically serves as a guide for using the extension.`
+# Bakalari Rewards
 
-# MyExtension - An [LNbits](https://github.com/lnbits/lnbits) Extension
+Rozšíření pro LNbits, které pravidelně kontroluje známky žáků v systému Bakaláři a podle nastavených pravidel vyplácí odměny v satoshi přes LNbits.
 
-## A Starter Template for Your Own Extension
+## Co rozšíření dělá
 
-Ready to start hacking? Once you've forked this extension, you can incorporate functions from other extensions as needed.
+- Přihlašuje se do Bakalářů přes rodičovské API.
+- Pravidelně načítá známky vybraných studentů.
+- Filtruje nové známky od posledního zpracování nebo od zvoleného data při backtestu.
+- Spočítá odměnu podle počtu a typu známek.
+- Odešle jednu souhrnnou platbu přes LNbits withdraw link nebo interní LNbits platbu.
+- Eviduje zpracované známky, aby nedocházelo k duplicitnímu proplacení mimo backtest režim.
 
-### How to Use This Template
+## Aktuální stav
 
-> [!IMPORTANT] the sequence of steps is very important so as not to run into issues!
+Rozšíření je v aktuálně testované verzi funkční včetně těchto částí:
 
-> [!NOTE] You may want to modify your models.py/migration.py before installing the extension on your lnbits server (between steps
+- načtení seznamu studentů,
+- načtení a uložení nastavení,
+- ruční úprava studenta,
+- spuštění pravidelné kontroly známek,
+- výpočet odměny,
+- odeslání LNbits platby,
+- backtest režim se znovuzpracováním historických známek.
 
-> This guide assumes you're using this extension as a base for a new one, and have installed LNbits using <https://github.com/lnbits/lnbits/blob/main/docs/guide/installation.md#option-1-recommended-poetry>.
+V testovaném prostředí proběhly opakovaně úspěšné interní platby a UI se načítá korektně včetně tabulky studentů, badge backtest režimu a settings dialogu.
 
-1. Fork this extension to your Github repo with the name you want, e.g., `yourextensionname` -> <https://github.com/yourgithubusername/yourextensionname> (do not include hyphens as they can cause issues!)
+## Známé chování
 
-1. Clone the Repository to your local computer. `git clone git@github.com/yourgithubuersname/yourextensionname`
+### Fiat měna v LNbits
 
-1. `cd` into the folder `yourextensionname` and delete the `.git` folder with `rm -rf .git`
+Původní problém `Currency 'null' not allowed` byl odstraněn nastavením fiat měny v LNbits. Prakticky se osvědčilo přidat podporovanou měnu jako `USD` a neponechat účet bez výchozí měny.
 
-1. run `./updateExtensionName.sh myextension:<yourextensionname> myExtension:<yourExtensionName> MyExtension:<YourExtensionName>` (to replace all variations)
+Pokud je jako výchozí měna nastavena pouze `CZK`, mohou se v logu objevovat warningy od providerů, kteří CZK nepodporují. Nejde o problém Bakalari Rewards, ale o chování kurzových providerů v LNbits.
 
-1. edit `./manifest.json` and replace the organization `lnbits` with `<yourgithubusernaame>`
+### `/undefined` 404 ve frontendu
 
-1. (Optional) Modify your models.py/migration.py file to create your own database tables, or just play with the already existing ones
+Při načítání frontendové části se stále může objevovat požadavek na `/undefined`, který končí `404`. Aktuálně to nevypadá na funkční problém:
 
-1. Re-initialize a git repo with `git init && git add . && git commit -m "initial commit"`
+- API endpointy fungují,
+- šablona se načítá,
+- routy se načítají,
+- UI je použitelné,
+- platby probíhají správně.
 
-1. Push to your github repo
+Jde tedy zatím o kosmetický frontendový glitch, který je vhodné dohledat později.
 
-1. [!IMPORTANT] **you must create a release** _in your github repo_ in order for it to show up in your lnbits extensions!
+## Doporučené nasazení
 
-1. Start up your lnbits server and go to the Settings -> EXTENSIONS and add your manifest to the extension sources. It should be `https://raw.githubusercontent.com/<yourgithubusernaame>/<yourextensionname>/main/manifest.json` (going to this link should show your updated manifest) and **save**. ![Extension Sources](https://i.imgur.com/MUGwAU3.png)
-1. Great! Now if you go to the **Extensions** and go to the **ALL** tab, you should see your extension available for installing! (note that Github has an API rate limit, and you may want to include an API key generated from your github account in the `.env` file)
+- Pro stabilní logy a funkční fiat přepočet nastavit v LNbits výchozí měnu účtu na `USD`.
+- `CZK` ponechat mezi povolenými měnami pouze pokud je potřeba v UI nebo administraci.
+- Backtest používat opatrně, protože může znovu proplatit historické známky.
+- Před ostrým provozem zkontrolovat nastavení cílové LN adresy nebo withdraw linku.
 
-1. Remove the installed extension from `lnbits/lnbits/extensions`.
+## Poznámky k bezpečnosti a provozu
 
-1. Create a symbolic link using `ln -s /home/ben/Projects/<name of your extension> /home/ben/Projects/lnbits/lnbits/extensions`.
-
-1. Restart your LNbits installation. You can now modify your extension and the changes will appear on your LNbits instance (stop & restart your lnbits for full initialization of all files if needed, e.g., for migration to take effect). You can also `git push` changes to your new repo and create a release _in your github repo_ if you want to install it from a fresh lnbits!
-
-1. IMPORTANT: If you want your extension to be added to the official LNbits manifest, please follow the guidelines here: <https://github.com/lnbits/lnbits-extensions#important>
+- Backtest režim maže záznamy o dříve zpracovaných známkách od zvoleného času a může vést k opakovanému payoutu.
+- Při použití `FakeWallet` jsou platby vhodné jen pro vývojové a testovací prostředí.
+- Pro produkci je potřeba použít reálný funding source a ověřit limity plateb v LNbits.
