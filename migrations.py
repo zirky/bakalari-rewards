@@ -110,3 +110,23 @@ async def m009_add_ln_address(db):
     Nahrazuje email/QR payout metodu.
     """
     await _safe_alter(db, "ALTER TABLE bakalari_rewards.students ADD COLUMN ln_address TEXT DEFAULT NULL")
+
+
+async def m010_add_extension_settings(db):
+    """
+    Vytvori tabulku extension_settings pro globalni konfiguraci rozsireni.
+    Uklada LNbits API URL, API key (sifrovany), dry_run, payout_enabled, max_sats_per_run.
+    """
+    await db.execute(
+        """
+        CREATE TABLE IF NOT EXISTS bakalari_rewards.extension_settings (
+            id TEXT PRIMARY KEY,
+            lnbits_api_url TEXT DEFAULT NULL,
+            lnbits_api_key TEXT DEFAULT NULL,
+            payout_enabled INTEGER DEFAULT 1,
+            dry_run INTEGER DEFAULT 0,
+            max_sats_per_run INTEGER DEFAULT 1000000,
+            allow_insecure_tls INTEGER DEFAULT 0
+        )
+        """
+    )
