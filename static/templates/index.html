@@ -1,4 +1,4 @@
-<template>
+<template id="page-bakalari-rewards">
   <div class="row q-col-gutter-md">
     <div class="col-12 q-gutter-y-md">
       <q-card>
@@ -81,7 +81,6 @@
         </q-card-section>
       </q-card>
 
-      <!-- Settings karta -->
       <q-card>
         <q-card-section>
           <div class="row items-center no-wrap q-mb-md">
@@ -133,7 +132,6 @@
     </div>
   </div>
 
-  <!-- Dialog: přidat / upravit žáka -->
   <q-dialog v-model="formDialog.show" persistent>
     <q-card style="min-width: 550px; max-width: 90vw">
       <q-card-section class="row items-center">
@@ -143,16 +141,13 @@
         <q-space />
         <q-btn icon="close" flat round dense @click="formDialog.show = false" />
       </q-card-section>
-
       <q-separator />
-
       <q-card-section style="max-height: 70vh" class="scroll">
         <q-input v-model="formDialog.data.name" label="Jméno žáka" filled class="q-mb-md" />
         <q-input v-model="formDialog.data.bakalari_url" label="URL Bakálářů" filled class="q-mb-md" />
         <q-input v-model="formDialog.data.bakalari_username" label="Přihlašovací jméno" filled class="q-mb-md" />
         <q-input v-model="formDialog.data.bakalari_password" label="Heslo" type="password" filled class="q-mb-md" />
         <q-input v-model="formDialog.data.ln_address" label="Lightning adresa" filled class="q-mb-md" hint="např. student@wallet.satoshi.place" />
-
         <q-toggle
           v-model="formDialog.data.backtest_mode"
           color="warning"
@@ -161,7 +156,6 @@
           label="Backtest režim"
           class="q-mb-sm"
         />
-
         <q-banner
           v-if="formDialog.data.backtest_mode"
           rounded
@@ -173,7 +167,6 @@
           <strong>Pozor:</strong>
           Zapnutý backtest může vést ke znovuzpracování a znovuproplacení historických známek.
         </q-banner>
-
         <div class="text-subtitle2 q-mb-sm">Odměna za známku (sats)</div>
         <div class="row q-gutter-sm">
           <q-input v-model.number="formDialog.data.reward_grade_1" label="Známka 1" type="number" filled style="width:100px" />
@@ -183,9 +176,7 @@
           <q-input v-model.number="formDialog.data.reward_grade_5" label="Známka 5" type="number" filled style="width:100px" />
         </div>
       </q-card-section>
-
       <q-separator />
-
       <q-card-actions align="right" class="q-pa-md">
         <q-btn flat label="Zrušit" @click="formDialog.show = false" />
         <q-btn
@@ -198,7 +189,6 @@
     </q-card>
   </q-dialog>
 
-  <!-- Dialog: nastavení rozšíření -->
   <q-dialog v-model="settingsDialog.show" persistent>
     <q-card style="min-width: 500px; max-width: 90vw">
       <q-card-section class="row items-center">
@@ -206,11 +196,8 @@
         <q-space />
         <q-btn icon="close" flat round dense @click="settingsDialog.show = false" />
       </q-card-section>
-
       <q-separator />
-
       <q-card-section style="max-height: 70vh" class="scroll q-gutter-y-md">
-
         <q-banner
           v-if="settingsDialog.data.managed_by_env && (settingsDialog.data.managed_by_env.lnbits_api_url || settingsDialog.data.managed_by_env.lnbits_api_key)"
           rounded
@@ -221,9 +208,7 @@
           </template>
           Některé hodnoty jsou spravované přes ENV proměnné a nelze je zde přepsat.
         </q-banner>
-
         <div class="text-subtitle2">LNbits API</div>
-
         <q-input
           v-model="settingsDialog.data.lnbits_api_url"
           label="LNbits API URL (např. https://legend.lnbits.com)"
@@ -231,7 +216,6 @@
           :disable="settingsDialog.data.managed_by_env && settingsDialog.data.managed_by_env.lnbits_api_url"
           class="q-mb-sm"
         />
-
         <div v-if="settingsDialog.data.managed_by_env && settingsDialog.data.managed_by_env.lnbits_api_key" class="text-caption text-orange-8 q-mb-md">
           <q-icon name="lock" size="xs" /> API Key je nastaven přes ENV, nelze přepsat.
         </div>
@@ -259,18 +243,10 @@
             <q-btn flat dense size="sm" label="Zrušit" @click="settingsDialog.data.clear_api_key = false" />
           </q-banner>
         </template>
-
         <q-separator class="q-my-sm" />
-
         <div class="text-subtitle2">Chování</div>
-
-        <q-toggle
-          v-model="settingsDialog.data.payout_enabled"
-          color="positive"
-          label="Vyplácet odměny"
-        />
+        <q-toggle v-model="settingsDialog.data.payout_enabled" color="positive" label="Vyplácet odměny" />
         <div class="text-caption text-grey q-ml-lg q-mb-sm">Pokud vypnuto, známky se pouze logují bez platby</div>
-
         <div>
           <q-toggle
             v-model="settingsDialog.data.dry_run"
@@ -283,16 +259,10 @@
           </span>
           <div class="text-caption text-grey q-ml-lg q-mb-sm">Simuluje platby bez skutečného odvádění sats</div>
         </div>
-
         <div>
-          <q-toggle
-            v-model="settingsDialog.data.allow_insecure_tls"
-            color="negative"
-            label="Povolit nespodný TLS"
-          />
+          <q-toggle v-model="settingsDialog.data.allow_insecure_tls" color="negative" label="Povolit nespodný TLS" />
           <div class="text-caption text-grey q-ml-lg q-mb-sm">Ignoruje chyby SSL certifikátu (pouze pro vývoj)</div>
         </div>
-
         <q-input
           v-model.number="settingsDialog.data.max_sats_per_run"
           label="Max. sats na jeden běh"
@@ -300,11 +270,8 @@
           filled
           hint="Pojistka proti nečekávaným velkým platbám"
         />
-
       </q-card-section>
-
       <q-separator />
-
       <q-card-actions align="right" class="q-pa-md">
         <q-btn flat label="Zrušit" @click="settingsDialog.show = false" />
         <q-btn unelevated color="primary" label="Uložit nastavení" @click="saveSettings" />
