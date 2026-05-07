@@ -57,7 +57,7 @@ def get_lnbits_config() -> dict:
         "api_key": os.environ.get("BAKALARI_REWARDS_LNBITS_API_KEY"),
         "allow_insecure_tls": get_env_bool("BAKALARI_REWARDS_ALLOW_INSECURE_TLS", False),
         "payout_enabled": get_env_bool("BAKALARI_REWARDS_PAYOUT_ENABLED", True),
-        "dry_run": get_env_bool("BAKALARI_REWARDS_DRY_RUN", True),
+        "dry_run": get_env_bool("BAKALARI_REWARDS_DRY_RUN", False),
         "max_sats_per_run": get_env_int("BAKALARI_REWARDS_MAX_SATS_PER_RUN", 1000000),
     }
 
