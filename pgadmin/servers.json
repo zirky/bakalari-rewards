@@ -1,0 +1,13 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "bakalari-rewards-db",
+      "Group": "Servers",
+      "Host": "db",
+      "Port": 5432,
+      "MaintenanceDB": "bakalari_rewards",
+      "Username": "bakalari",
+      "SSLMode": "prefer"
+    }
+  }
+}

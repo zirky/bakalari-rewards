@@ -1,0 +1,7 @@
+[
+  {"subject": "Matematika", "value": "1", "date": "2026-01-15T10:00:00"},
+  {"subject": "Čeština",    "value": "2+", "date": "2026-01-16T09:00:00"},
+  {"subject": "Fyzika",     "value": "3",  "date": "2026-01-17T11:00:00"},
+  {"subject": "Dějepis",    "value": "4-", "date": "2026-01-18T08:30:00"},
+  {"subject": "Chemie",     "value": "5",  "date": "2026-01-19T12:00:00"}
+]
